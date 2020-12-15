@@ -35,7 +35,8 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
     @Override
     public void onDestroy() {
         super.onDestroy();
-
+        Log.d("board", "onDestroy");
+        
         ///< Unbind the service when the activity is destroyed
         getApplicationContext().unbindService(this);
     }
