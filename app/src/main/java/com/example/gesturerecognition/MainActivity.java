@@ -9,11 +9,17 @@ import android.content.ServiceConnection;
 import android.os.Bundle;
 import android.os.IBinder;
 import android.util.Log;
+import android.view.View;
+import android.widget.Button;
 
 import androidx.appcompat.app.AppCompatActivity;
 
+import com.mbientlab.metawear.DeviceInformation;
 import com.mbientlab.metawear.MetaWearBoard;
 import com.mbientlab.metawear.android.BtleService;
+
+import bolts.Continuation;
+import bolts.Task;
 
 public class MainActivity extends AppCompatActivity implements ServiceConnection {
     private BtleService.LocalBinder serviceBinder;
@@ -36,7 +42,7 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
     public void onDestroy() {
         super.onDestroy();
         Log.d("board", "onDestroy");
-        
+
         ///< Unbind the service when the activity is destroyed
         getApplicationContext().unbindService(this);
     }
@@ -48,13 +54,33 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
         serviceBinder = (BtleService.LocalBinder) service;
 
         retrieveBoard();
-        Log.d("board", "serviceBinder: " + serviceBinder);
-        Log.d("board", "board: " + board);
+
+        Button button = (Button) findViewById(R.id.buttonConnect);
+        button.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                connectTo();
+            }
+        });
+
+        board.onUnexpectedDisconnect(new MetaWearBoard.UnexpectedDisconnectHandler() {
+            @Override
+            public void disconnected(int status) {
+                Log.i("MainActivity", "Unexpectedly lost connection: " + status);
+            }
+        });
     }
 
     @Override
     public void onServiceDisconnected(ComponentName componentName) {
         Log.d("board", "onServiceDisconnected");
+
+        board.disconnectAsync().continueWith(new Continuation<Void, Void>() {
+            @Override
+            public Void then(Task<Void> task) throws Exception {
+                Log.i("MainActivity", "Disconnected");
+                return null;
+            }
+        });
     }
 
 
@@ -64,5 +90,29 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
 
         // Create a MetaWear board object for the Bluetooth Device
         board = serviceBinder.getMetaWearBoard(remoteDevice);
+    }
+
+    public void connectTo(){
+        board.connectAsync().continueWith(new Continuation<Void, Void>() {
+            @Override
+            public Void then(Task<Void> task) throws Exception {
+                if (task.isFaulted()) {
+                    Log.d("board", "Failed to connect");
+                } else {
+                    Log.d("board", "Connected");
+                    Log.i("board", "board model = " + board.getModel());
+                }
+                return null;
+            }
+        });
+
+        board.readDeviceInformationAsync()
+                .continueWith(new Continuation<DeviceInformation, Void>() {
+                    @Override
+                    public Void then(Task<DeviceInformation> task) throws Exception {
+                        Log.i("board", "Device Information: " + task.getResult());
+                        return null;
+                    }
+                });
     }
 }
