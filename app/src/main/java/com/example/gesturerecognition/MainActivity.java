@@ -11,6 +11,7 @@ import android.os.IBinder;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
+import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
 
@@ -77,10 +78,18 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
             public Void then(Task<Void> task) throws Exception {
                 if (task.isFaulted()) {
                     Log.d("board", "Failed to connect");
-                } else {
-                    Log.d("board", "Connected");
-                    Log.i("board", "board model = " + board.getModel());
+                    return null;
                 }
+
+                try {
+                    runOnUiThread(() -> Toast.makeText(MainActivity.this, "Sensor connected", Toast.LENGTH_SHORT).show());
+                    Thread.sleep(300);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+
+                Log.d("board", "Connected");
+                Log.d("board", "board model = " + board.getModel());
 
                 board.readDeviceInformationAsync()
                         .continueWith(new Continuation<DeviceInformation, Void>() {
