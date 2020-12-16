@@ -17,6 +17,7 @@ import androidx.appcompat.app.AppCompatActivity;
 import com.mbientlab.metawear.DeviceInformation;
 import com.mbientlab.metawear.MetaWearBoard;
 import com.mbientlab.metawear.android.BtleService;
+import com.mbientlab.metawear.module.Led;
 
 import bolts.Continuation;
 import bolts.Task;
@@ -36,7 +37,65 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
         ///< Bind the service when the activity is created
         getApplicationContext().bindService(new Intent(this, BtleService.class),
                 this, Context.BIND_AUTO_CREATE);
+
+        Button connect = (Button) findViewById(R.id.buttonConnect);
+        connect.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                connectTo();
+            }
+        });
+
+        Button led = (Button) findViewById(R.id.buttonLed);
+        led.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                blinkLedTenTimes();
+            }
+        });
     }
+
+    public void retrieveBoard() {
+        final BluetoothManager btManager = (BluetoothManager) getSystemService(Context.BLUETOOTH_SERVICE);
+        final BluetoothDevice remoteDevice = btManager.getAdapter().getRemoteDevice(MW_MAC_ADDRESS);
+
+        // Create a MetaWear board object for the Bluetooth Device
+        board = serviceBinder.getMetaWearBoard(remoteDevice);
+    }
+
+    public void blinkLedTenTimes() {
+        Led led;
+        if ((led = board.getModule(Led.class)) != null) {
+            led.editPattern(Led.Color.BLUE, Led.PatternPreset.BLINK)
+                    .repeatCount((byte) 10)
+                    .commit();
+            led.play();
+        }
+    }
+
+    public void connectTo(){
+        board.connectAsync().continueWith(new Continuation<Void, Void>() {
+            @Override
+            public Void then(Task<Void> task) throws Exception {
+                if (task.isFaulted()) {
+                    Log.d("board", "Failed to connect");
+                } else {
+                    Log.d("board", "Connected");
+                    Log.i("board", "board model = " + board.getModel());
+                }
+
+                board.readDeviceInformationAsync()
+                        .continueWith(new Continuation<DeviceInformation, Void>() {
+                            @Override
+                            public Void then(Task<DeviceInformation> task) throws Exception {
+                                Log.i("board", "Device Information: " + task.getResult());
+                                return null;
+                            }
+                        });
+
+                return null;
+            }
+        });
+    }
+
 
     @Override
     public void onDestroy() {
@@ -55,17 +114,10 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
 
         retrieveBoard();
 
-        Button button = (Button) findViewById(R.id.buttonConnect);
-        button.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                connectTo();
-            }
-        });
-
         board.onUnexpectedDisconnect(new MetaWearBoard.UnexpectedDisconnectHandler() {
             @Override
             public void disconnected(int status) {
-                Log.i("MainActivity", "Unexpectedly lost connection: " + status);
+                Log.i("board", "Unexpectedly lost connection: " + status);
             }
         });
     }
@@ -77,42 +129,9 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
         board.disconnectAsync().continueWith(new Continuation<Void, Void>() {
             @Override
             public Void then(Task<Void> task) throws Exception {
-                Log.i("MainActivity", "Disconnected");
+                Log.i("board", "Disconnected");
                 return null;
             }
         });
-    }
-
-
-    public void retrieveBoard() {
-        final BluetoothManager btManager = (BluetoothManager) getSystemService(Context.BLUETOOTH_SERVICE);
-        final BluetoothDevice remoteDevice = btManager.getAdapter().getRemoteDevice(MW_MAC_ADDRESS);
-
-        // Create a MetaWear board object for the Bluetooth Device
-        board = serviceBinder.getMetaWearBoard(remoteDevice);
-    }
-
-    public void connectTo(){
-        board.connectAsync().continueWith(new Continuation<Void, Void>() {
-            @Override
-            public Void then(Task<Void> task) throws Exception {
-                if (task.isFaulted()) {
-                    Log.d("board", "Failed to connect");
-                } else {
-                    Log.d("board", "Connected");
-                    Log.i("board", "board model = " + board.getModel());
-                }
-                return null;
-            }
-        });
-
-        board.readDeviceInformationAsync()
-                .continueWith(new Continuation<DeviceInformation, Void>() {
-                    @Override
-                    public Void then(Task<DeviceInformation> task) throws Exception {
-                        Log.i("board", "Device Information: " + task.getResult());
-                        return null;
-                    }
-                });
     }
 }
