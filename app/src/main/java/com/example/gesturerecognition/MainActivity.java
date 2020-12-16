@@ -102,6 +102,7 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
         super.onDestroy();
         Log.d("board", "onDestroy");
 
+        board.tearDown();
         ///< Unbind the service when the activity is destroyed
         getApplicationContext().unbindService(this);
     }
