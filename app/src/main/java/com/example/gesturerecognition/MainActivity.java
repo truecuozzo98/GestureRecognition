@@ -15,10 +15,18 @@ import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
 
+import com.mbientlab.metawear.Data;
 import com.mbientlab.metawear.DeviceInformation;
 import com.mbientlab.metawear.MetaWearBoard;
+import com.mbientlab.metawear.Route;
+import com.mbientlab.metawear.Subscriber;
 import com.mbientlab.metawear.android.BtleService;
+import com.mbientlab.metawear.builder.RouteBuilder;
+import com.mbientlab.metawear.builder.RouteComponent;
+import com.mbientlab.metawear.data.Acceleration;
+import com.mbientlab.metawear.module.Accelerometer;
 import com.mbientlab.metawear.module.Led;
+
 
 import bolts.Continuation;
 import bolts.Task;
@@ -29,6 +37,7 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
     //private final String MW_MAC_ADDRESS= "EC:2C:09:81:22:AC";
 
     private MetaWearBoard board;
+    private Accelerometer accelerometer;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -50,6 +59,36 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
         led.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
                 blinkLedTenTimes();
+            }
+        });
+
+        Button start = (Button) findViewById(R.id.buttonStart);
+        start.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                startAccMeasurement();
+            }
+        });
+
+        Button stop = (Button) findViewById(R.id.buttonStop);
+        stop.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                stopAccMeasurement();
+            }
+        });
+    }
+
+    @Override
+    public void onServiceConnected(ComponentName name, IBinder service) {
+        ///< Typecast the binder to the service's LocalBinder class
+        Log.d("board", "onServiceConnected");
+        serviceBinder = (BtleService.LocalBinder) service;
+
+        retrieveBoard();
+
+        board.onUnexpectedDisconnect(new MetaWearBoard.UnexpectedDisconnectHandler() {
+            @Override
+            public void disconnected(int status) {
+                Log.i("board", "Unexpectedly lost connection: " + status);
             }
         });
     }
@@ -105,6 +144,44 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
         });
     }
 
+    public void startAccMeasurement() {
+        if (!board.isConnected()){
+            Toast.makeText(MainActivity.this, "Sensor must be connected before starting measurement", Toast.LENGTH_LONG).show();
+            return;
+        }
+
+        accelerometer = board.getModule(Accelerometer.class);
+        accelerometer.start();
+
+        accelerometer.acceleration().addRouteAsync(new RouteBuilder() {
+            @Override
+            public void configure(RouteComponent source) {
+                source.stream(new Subscriber() {
+                    @Override
+                    public void apply(Data data, Object... env) {
+                        Log.i("stream", data.value(Acceleration.class).toString());
+                    }
+                });
+            }
+        }).continueWith(new Continuation<Route, Void>() {
+            @Override
+            public Void then(Task<Route> task) throws Exception {
+                accelerometer.acceleration().start();
+                accelerometer.start();
+                return null;
+            }
+        });
+
+
+        Toast.makeText(MainActivity.this, "Measurement started", Toast.LENGTH_SHORT).show();
+    }
+
+    public void stopAccMeasurement() {
+        if(board == null || accelerometer == null) { return; }
+
+        accelerometer.stop();
+        Toast.makeText(MainActivity.this, "Measurement stopped", Toast.LENGTH_SHORT).show();
+    }
 
     @Override
     public void onDestroy() {
@@ -114,22 +191,6 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
         board.tearDown();
         ///< Unbind the service when the activity is destroyed
         getApplicationContext().unbindService(this);
-    }
-
-    @Override
-    public void onServiceConnected(ComponentName name, IBinder service) {
-        ///< Typecast the binder to the service's LocalBinder class
-        Log.d("board", "onServiceConnected");
-        serviceBinder = (BtleService.LocalBinder) service;
-
-        retrieveBoard();
-
-        board.onUnexpectedDisconnect(new MetaWearBoard.UnexpectedDisconnectHandler() {
-            @Override
-            public void disconnected(int status) {
-                Log.i("board", "Unexpectedly lost connection: " + status);
-            }
-        });
     }
 
     @Override
