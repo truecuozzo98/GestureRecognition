@@ -75,7 +75,7 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
         Button led = (Button) findViewById(R.id.buttonLed);
         led.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
-                blinkLedTenTimes();
+                blinkLed();
             }
         });
 
@@ -118,7 +118,7 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
         board = serviceBinder.getMetaWearBoard(remoteDevice);
     }
 
-    public void blinkLedTenTimes() {
+    public void blinkLed() {
         if (!board.isConnected()){
             Toast.makeText(MainActivity.this, "Please connect your sensor first", Toast.LENGTH_LONG).show();
             return;
@@ -127,7 +127,7 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
         Led led;
         if ((led = board.getModule(Led.class)) != null) {
             led.editPattern(Led.Color.BLUE, Led.PatternPreset.BLINK)
-                    .repeatCount((byte) 10)
+                    .repeatCount((byte) 2)
                     .commit();
             led.play();
         }
@@ -173,11 +173,16 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
         }
 
         accelerometer = board.getModule(Accelerometer.class);
+        accelerometer.configure()
+                .odr(5f)       // Set sampling frequency to 25Hz, or closest valid ODR
+                .range(4f)      // Set data range to +/-4g, or closet valid range
+                .commit();
         accelerometer.start();
 
         accelerometer.acceleration().addRouteAsync(new RouteBuilder() {
             @Override
             public void configure(RouteComponent source) {
+                source.limit(10000);
                 source.stream(new Subscriber() {
                     @Override
                     public void apply(Data data, Object... env) {
@@ -195,7 +200,7 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
                         }
 
                         dataSensor.add(object);
-                }
+                    }
                 });
             }
         }).continueWith(new Continuation<Route, Void>() {
@@ -206,8 +211,6 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
                 return null;
             }
         });
-
-
         Toast.makeText(MainActivity.this, "Measurement started", Toast.LENGTH_SHORT).show();
     }
 
@@ -223,28 +226,6 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
         } else {
             (new Handler()).postDelayed(this::writeDataOnDevice, 200);
         }
-
-
-
-
-        /*File file = new File(android.os.Environment.getExternalStorageDirectory().getAbsolutePath());
-        try {
-            FileWriter outputfile = new FileWriter(file);
-            CSVWriter writer = new CSVWriter(outputfile);
-
-            List<String[]> csvData = new ArrayList<String[]>();
-            csvData.add(new String[] {"timestamp", "x-axis", "y-axis", "z-axis" });
-
-            for(JSONObject x : dataSensor){
-                Log.d("board", x.toString());
-                csvData.add(new String[] {(String) x.get("timestamp"), (String) x.get("x"), (String) x.get("y"), (String) x.get("z")});
-            }
-
-            writer.writeAll(csvData);
-            writer.close();
-        } catch (IOException | JSONException e) {
-            e.printStackTrace();
-        }*/
     }
 
     public void writeDataOnDevice() {
@@ -254,13 +235,11 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
         }
 
         try {
-            File gpxfile = new File(dir, "Data Sensor");
+            File gpxfile = new File(dir, "Data Sensor - " + Calendar.getInstance().getTimeInMillis());
             FileWriter writer = new FileWriter(gpxfile);
 
             writer.append("timestamp, x-axis, y-axis, z-axis\n");
-            
             for(JSONObject a : dataSensor){
-                //Log.d("board", a.toString());
                 String timestamp = (String) a.get("timestamp") + ", ";
                 String x = (String) a.get("x") + ", ";
                 String y = (String) a.get("y") + ", ";
@@ -271,7 +250,6 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
             writer.close();
 
             Toast.makeText(MainActivity.this, "Your file ha been saved in folder " + dir, Toast.LENGTH_LONG).show();
-
         } catch (Exception e){
             e.printStackTrace();
         }
