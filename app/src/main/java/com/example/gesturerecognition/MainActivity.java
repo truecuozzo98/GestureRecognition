@@ -16,6 +16,7 @@ import android.view.View;
 import android.widget.Button;
 import android.widget.Toast;
 
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 
@@ -197,12 +198,19 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
         accelerometer.stop();
         Toast.makeText(MainActivity.this, "Measurement stopped", Toast.LENGTH_SHORT).show();
 
-        if (checkSelfPermission(android.Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
-            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE}, 1);
+        if (checkSelfPermission(android.Manifest.permission.WRITE_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED) {
             (new Handler()).postDelayed(this::writeDataOnDevice, 200);
+
         } else {
-            (new Handler()).postDelayed(this::writeDataOnDevice, 200);
+            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE}, 1);
         }
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+
+        writeDataOnDevice();
     }
 
     public void writeDataOnDevice() {
@@ -226,7 +234,7 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
             writer.flush();
             writer.close();
 
-            Toast.makeText(MainActivity.this, "Your file ha been saved in folder " + dir, Toast.LENGTH_LONG).show();
+            Toast.makeText(MainActivity.this, "Your file has been saved in folder " + dir, Toast.LENGTH_LONG).show();
         } catch (Exception e){
             e.printStackTrace();
         }
