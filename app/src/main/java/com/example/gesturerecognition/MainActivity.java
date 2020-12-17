@@ -30,19 +30,14 @@ import com.mbientlab.metawear.builder.RouteComponent;
 import com.mbientlab.metawear.data.Acceleration;
 import com.mbientlab.metawear.module.Accelerometer;
 import com.mbientlab.metawear.module.Led;
-import com.opencsv.CSVWriter;
 
-
-import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.File;
 import java.io.FileWriter;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Calendar;
-import java.util.List;
 
 import bolts.Continuation;
 import bolts.Task;
@@ -62,36 +57,19 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
         setContentView(R.layout.activity_main);
 
         ///< Bind the service when the activity is created
-        getApplicationContext().bindService(new Intent(this, BtleService.class),
-                this, Context.BIND_AUTO_CREATE);
+        getApplicationContext().bindService(new Intent(this, BtleService.class), this, Context.BIND_AUTO_CREATE);
 
-        Button connect = (Button) findViewById(R.id.buttonConnect);
-        connect.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                connectTo();
-            }
-        });
+        Button connect = findViewById(R.id.buttonConnect);
+        connect.setOnClickListener(v -> connectTo());
 
-        Button led = (Button) findViewById(R.id.buttonLed);
-        led.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                blinkLed();
-            }
-        });
+        Button led = findViewById(R.id.buttonLed);
+        led.setOnClickListener(v -> blinkLed());
 
-        Button start = (Button) findViewById(R.id.buttonStart);
-        start.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                startAccMeasurement();
-            }
-        });
+        Button start = findViewById(R.id.buttonStart);
+        start.setOnClickListener(v -> startAccMeasurement());
 
-        Button stop = (Button) findViewById(R.id.buttonStop);
-        stop.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                stopAccMeasurement();
-            }
-        });
+        Button stop = findViewById(R.id.buttonStop);
+        stop.setOnClickListener(v -> stopAccMeasurement());
     }
 
     @Override
@@ -182,7 +160,6 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
         accelerometer.acceleration().addRouteAsync(new RouteBuilder() {
             @Override
             public void configure(RouteComponent source) {
-                source.limit(10000);
                 source.stream(new Subscriber() {
                     @Override
                     public void apply(Data data, Object... env) {
@@ -244,7 +221,7 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
                 String x = (String) a.get("x") + ", ";
                 String y = (String) a.get("y") + ", ";
                 String z = (String) a.get("z") + "\n";
-                writer.append((timestamp + x + y + z));
+                writer.append(timestamp).append(x).append(y).append(z);
             }
             writer.flush();
             writer.close();
