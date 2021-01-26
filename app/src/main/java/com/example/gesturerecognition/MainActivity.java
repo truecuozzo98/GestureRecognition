@@ -4,8 +4,6 @@ import android.Manifest;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothManager;
-import android.bluetooth.le.ScanFilter;
-import android.bluetooth.le.ScanSettings;
 import android.content.BroadcastReceiver;
 import android.content.ComponentName;
 import android.content.Context;
@@ -19,7 +17,6 @@ import android.os.Handler;
 import android.os.IBinder;
 import android.os.ParcelUuid;
 import android.util.Log;
-import android.view.View;
 import android.widget.Button;
 import android.widget.Toast;
 
@@ -27,7 +24,6 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
-import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentManager;
 import androidx.fragment.app.FragmentTransaction;
 
@@ -62,17 +58,15 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
 
     public static BluetoothDevice bluetoothDevice;
     private BtleService.LocalBinder serviceBinder;
-    private final String MW_MAC_ADDRESS= "CD:49:78:BF:7C:89";
-    //private final String MW_MAC_ADDRESS= "EC:2C:09:81:22:AC";
+    //private final String MW_MAC_ADDRESS= "CD:49:78:BF:7C:89";
 
     private MetaWearBoard board;
     private Accelerometer accelerometer;
-    private ArrayList<JSONObject> dataSensor = new ArrayList<JSONObject>();
-    private ParcelUuid metawearUuid = ParcelUuid.fromString(String.valueOf(MetaWearBoard.METAWEAR_GATT_SERVICE));
+    private final ArrayList<JSONObject> dataSensor = new ArrayList<JSONObject>();
 
     private BluetoothAdapter bluetoothAdapter;
 
-    private GPSBroadcastReceiver gpsBroadcastReceiver = new GPSBroadcastReceiver();
+    private final GPSBroadcastReceiver gpsBroadcastReceiver = new GPSBroadcastReceiver();
 
 
 
@@ -175,12 +169,7 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
         // Create a MetaWear board object for the Bluetooth Device
         board = serviceBinder.getMetaWearBoard(remoteDevice);
 
-        board.onUnexpectedDisconnect(new MetaWearBoard.UnexpectedDisconnectHandler() {
-            @Override
-            public void disconnected(int status) {
-                Log.i("board", "Unexpectedly lost connection: " + status);
-            }
-        });
+        board.onUnexpectedDisconnect(status -> Log.i("board", "Unexpectedly lost connection: " + status));
 
         connectBoard();
     }
@@ -256,35 +245,29 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
     }
 
     public void connectBoard() {
-        board.connectAsync().continueWith(new Continuation<Void, Void>() {
-            @Override
-            public Void then(Task<Void> task) throws Exception {
-                if (task.isFaulted()) {
-                    Log.d("board", "Failed to connect");
-                    return null;
-                }
-
-                try {
-                    runOnUiThread(() -> Toast.makeText(MainActivity.this, "Sensor connected", Toast.LENGTH_SHORT).show());
-                    Thread.sleep(300);
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
-
-                Log.d("board", "Connected");
-                Log.d("board", "board model = " + board.getModel());
-
-                board.readDeviceInformationAsync()
-                        .continueWith(new Continuation<DeviceInformation, Void>() {
-                            @Override
-                            public Void then(Task<DeviceInformation> task) throws Exception {
-                                Log.i("board", "Device Information: " + task.getResult());
-                                return null;
-                            }
-                        });
-
+        board.connectAsync().continueWith((Continuation<Void, Void>) task -> {
+            if (task.isFaulted()) {
+                Log.d("board", "Failed to connect");
                 return null;
             }
+
+            try {
+                runOnUiThread(() -> Toast.makeText(MainActivity.this, "Sensor connected", Toast.LENGTH_SHORT).show());
+                Thread.sleep(300);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+
+            Log.d("board", "Connected");
+            Log.d("board", "board model = " + board.getModel());
+
+            board.readDeviceInformationAsync()
+                    .continueWith((Continuation<DeviceInformation, Void>) task1 -> {
+                        Log.i("board", "Device Information: " + task1.getResult());
+                        return null;
+                    });
+
+            return null;
         });
     }
 
@@ -301,36 +284,25 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
                 .commit();
         accelerometer.start();
 
-        accelerometer.acceleration().addRouteAsync(new RouteBuilder() {
-            @Override
-            public void configure(RouteComponent source) {
-                source.stream(new Subscriber() {
-                    @Override
-                    public void apply(Data data, Object... env) {
-                        Log.i("board", data.value(Acceleration.class).toString());
-                        Log.i("board", String.valueOf(data.timestamp().getTimeInMillis()));
+        accelerometer.acceleration().addRouteAsync(source -> source.stream((Subscriber) (data, env) -> {
+            Log.i("board", data.value(Acceleration.class).toString());
+            Log.i("board", String.valueOf(data.timestamp().getTimeInMillis()));
 
-                        JSONObject object = new JSONObject();
-                        try {
-                            object.put("timestamp", String.valueOf(data.timestamp().getTimeInMillis()));
-                            object.put("x", String.valueOf(data.value(Acceleration.class).x()));
-                            object.put("y", String.valueOf(data.value(Acceleration.class).y()));
-                            object.put("z", String.valueOf(data.value(Acceleration.class).z()));
-                        } catch (JSONException e) {
-                            e.printStackTrace();
-                        }
+            JSONObject object = new JSONObject();
+            try {
+                object.put("timestamp", String.valueOf(data.timestamp().getTimeInMillis()));
+                object.put("x", String.valueOf(data.value(Acceleration.class).x()));
+                object.put("y", String.valueOf(data.value(Acceleration.class).y()));
+                object.put("z", String.valueOf(data.value(Acceleration.class).z()));
+            } catch (JSONException e) {
+                e.printStackTrace();
+            }
 
-                        dataSensor.add(object);
-                    }
-                });
-            }
-        }).continueWith(new Continuation<Route, Void>() {
-            @Override
-            public Void then(Task<Route> task) throws Exception {
-                accelerometer.acceleration().start();
-                accelerometer.start();
-                return null;
-            }
+            dataSensor.add(object);
+        })).continueWith((Continuation<Route, Void>) task -> {
+            accelerometer.acceleration().start();
+            accelerometer.start();
+            return null;
         });
         Toast.makeText(MainActivity.this, "Measurement started", Toast.LENGTH_SHORT).show();
     }
@@ -353,16 +325,16 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
 
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
         switch (requestCode) {
             case LOCATION_PERMISSION:
                 startActivity(new Intent(android.provider.Settings.ACTION_LOCATION_SOURCE_SETTINGS));
-                /*if(checkLocationPermission()){
+                if(checkLocationPermission()){
                     toFragmentBleDevice();
-                }*/
+                }
                 break;
             case STORAGE_REQUEST_CODE:
                 writeDataOnDevice();
+                break;
         }
     }
 
@@ -407,12 +379,9 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
     public void onServiceDisconnected(ComponentName componentName) {
         Log.d("board", "onServiceDisconnected");
 
-        board.disconnectAsync().continueWith(new Continuation<Void, Void>() {
-            @Override
-            public Void then(Task<Void> task) throws Exception {
-                Log.i("board", "Disconnected");
-                return null;
-            }
+        board.disconnectAsync().continueWith((Continuation<Void, Void>) task -> {
+            Log.i("board", "Disconnected");
+            return null;
         });
     }
 
@@ -451,11 +420,10 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
                     if(checkLocationPermission() && checkGpsEnabled()){
                         toFragmentBleDevice();
                     }
-                } else {
-                    //isGPSEnabled = false;
                 }
-            }catch (Exception ex){
-                Log.d("GPSBroadcastReceiver", ex.toString());
+
+            }catch (Exception e){
+                Log.d("GPSBroadcastReceiver", e.toString());
             }
         }
     }

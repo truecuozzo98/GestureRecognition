@@ -1,30 +1,18 @@
 package com.example.gesturerecognition;
 
-import android.bluetooth.BluetoothDevice;
 import android.content.Context;
-import android.content.Intent;
-import android.util.Log;
 import android.view.View;
 import android.widget.TextView;
-import android.widget.Toast;
 
 import androidx.annotation.NonNull;
-import androidx.appcompat.app.AppCompatActivity;
 import androidx.constraintlayout.widget.ConstraintLayout;
-import androidx.fragment.app.Fragment;
-import androidx.fragment.app.FragmentManager;
-import androidx.fragment.app.FragmentTransaction;
 import androidx.recyclerview.widget.RecyclerView;
-import com.mbientlab.metawear.android.BtleService;
-
-import java.util.ArrayList;
-import java.util.Objects;
 
 public class BleDeviceViewHolder extends RecyclerView.ViewHolder implements View.OnClickListener {
     TextView device_name;
     BleDeviceListFragment bleDevice;
     ConstraintLayout bluetoothItem;
-    private Context mContext;
+    private final Context mContext;
 
     public BleDeviceViewHolder(@NonNull View itemView, BleDeviceListFragment bleDevice, Context context) {
         super(itemView);

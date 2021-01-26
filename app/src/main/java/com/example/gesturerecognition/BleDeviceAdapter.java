@@ -1,6 +1,5 @@
 package com.example.gesturerecognition;
 
-import android.bluetooth.BluetoothDevice;
 import android.content.Context;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -8,12 +7,11 @@ import android.view.ViewGroup;
 
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
-import java.util.ArrayList;
 
 public class BleDeviceAdapter extends RecyclerView.Adapter<BleDeviceViewHolder> {
-    private BleDeviceListFragment bleDevice;
-    private LayoutInflater layoutInflater;
-    private Context mContext;
+    private final BleDeviceListFragment bleDevice;
+    private final LayoutInflater layoutInflater;
+    private final Context mContext;
 
     public BleDeviceAdapter(BleDeviceListFragment bleDevice, Context context) {
         this.layoutInflater = LayoutInflater.from(bleDevice.getContext());

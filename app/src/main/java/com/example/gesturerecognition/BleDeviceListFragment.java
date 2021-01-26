@@ -6,9 +6,14 @@ import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothManager;
 import android.content.Context;
 import android.content.pm.PackageManager;
-import android.graphics.ColorFilter;
 import android.os.Bundle;
 import android.os.Handler;
+import android.os.ParcelUuid;
+import android.util.Log;
+import android.view.LayoutInflater;
+import android.view.View;
+import android.view.ViewGroup;
+import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -18,23 +23,10 @@ import androidx.fragment.app.FragmentTransaction;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
-import android.os.ParcelUuid;
-import android.util.Log;
-import android.view.LayoutInflater;
-import android.view.View;
-import android.view.ViewGroup;
-import android.view.animation.Animation;
-import android.view.animation.RotateAnimation;
-import android.widget.ImageButton;
-import android.widget.TextView;
-import android.widget.Toast;
-
-import com.mbientlab.bletoolbox.scanner.BleScannerFragment;
 import com.mbientlab.metawear.MetaWearBoard;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.UUID;
 
 import no.nordicsemi.android.support.v18.scanner.BluetoothLeScannerCompat;
 import no.nordicsemi.android.support.v18.scanner.ScanCallback;
@@ -46,37 +38,29 @@ import no.nordicsemi.android.support.v18.scanner.ScanSettings;
 public class BleDeviceListFragment extends Fragment {
     private boolean scanning = false;
     private final Handler handler = new Handler();
-    public ArrayList<BluetoothDevice> list = new ArrayList<>();
     private static final long SCAN_PERIOD = 10000;
+    public static ArrayList<BluetoothDevice> devices = new ArrayList<>();
     BluetoothLeScannerCompat bluetoothLeScanner;
     ScanSettings scanSettings;
     List<ScanFilter> scanFilters = new ArrayList<>();
     ParcelUuid metawearUuid = ParcelUuid.fromString(String.valueOf(MetaWearBoard.METAWEAR_GATT_SERVICE));
-    //Metawear UUID = 326a9000-85cb-9195-d9dd-464cfbbae75a
-
-    public static ArrayList<BluetoothDevice> devices = new ArrayList<>();
     RecyclerView recyclerView;
     BleDeviceAdapter bleDeviceAdapter;
     BluetoothAdapter bluetoothAdapter;
 
     ConstraintLayout constraintLayoutMain;
 
-
     private Context mContext;
     @Override
-    public void onAttach(Context context) {
+    public void onAttach(@NonNull Context context) {
         super.onAttach(context);
         mContext = context;
     }
-
 
     @Nullable
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
         View v = inflater.inflate(R.layout.fragment_ble_device, container, false);
-
-        Log.d("fragmentLOG", "onCreateView");
-
         constraintLayoutMain = v.findViewById(R.id.constraintLayoutMain);
         constraintLayoutMain.setOnClickListener(onClickListener);
 
@@ -93,26 +77,19 @@ public class BleDeviceListFragment extends Fragment {
     @Override
     public void onStart() {
         super.onStart();
-        Log.d("fragmentLOG", "onStart");
 
         // Se BLE non è supportato, chiudo il fragment
         if (!getActivity().getPackageManager().hasSystemFeature(PackageManager.FEATURE_BLUETOOTH_LE)) {
             Toast.makeText(getContext(), "BLE non supportato", Toast.LENGTH_SHORT).show();
-
             Fragment fragment = getFragmentManager().findFragmentByTag("fragmentBleDevice");
             FragmentTransaction transaction = getFragmentManager().beginTransaction();
             transaction.remove(fragment).commit();
         }
         else {
-            //Toast.makeText(getContext(), "BLE supportato", Toast.LENGTH_SHORT).show();
-            Log.d("fragmentLOG", "onStart else");
-
             final BluetoothManager bluetoothManager = (BluetoothManager) getActivity().getSystemService(Context.BLUETOOTH_SERVICE);
             bluetoothAdapter = bluetoothManager.getAdapter();
 
             if (bluetoothAdapter != null && bluetoothAdapter.isEnabled()) {
-                Log.d("fragmentLOG", "if bluetoothAdapter");
-
                 bluetoothLeScanner = BluetoothLeScannerCompat.getScanner();
                 scanSettings = new ScanSettings.Builder()
                         .setLegacy(false)
@@ -134,8 +111,9 @@ public class BleDeviceListFragment extends Fragment {
         super.onPause();
         removeFragment();
 
-        if(scanning)
+        if(scanning) {
             bluetoothLeScanner.stopScan(scanCallback);
+        }
     }
 
     @Override
@@ -143,8 +121,9 @@ public class BleDeviceListFragment extends Fragment {
         super.onStop();
         removeFragment();
 
-        if(scanning)
+        if(scanning){
             bluetoothLeScanner.stopScan(scanCallback);
+        }
     }
 
     public void startScan() {
@@ -164,15 +143,12 @@ public class BleDeviceListFragment extends Fragment {
         @Override
         public void onScanResult(int callbackType, @NonNull ScanResult result) {
             super.onScanResult(callbackType, result);
-            //Log.d("PROVA", "Result: " + result.toString());
             addDevice(result.getDevice());
         }
 
         @Override
         public void onBatchScanResults(@NonNull List<ScanResult> results) {
             super.onBatchScanResults(results);
-            //Log.d("PROVA", "Results: " + results.toString());
-
             for(ScanResult scanResult : results)
                 addDevice(scanResult.getDevice());
         }
@@ -184,13 +160,12 @@ public class BleDeviceListFragment extends Fragment {
     };
 
     public void addDevice(BluetoothDevice bluetoothDevice) {
-        if(!devices.contains(bluetoothDevice))
-            if(bluetoothDevice.getName() != null)
+        if(!devices.contains(bluetoothDevice)){
+            if(bluetoothDevice.getName() != null) {
                 devices.add(bluetoothDevice);
-
+            }
+        }
         bleDeviceAdapter.notifyDataSetChanged();
-
-        //Log.d("PROVA", "LISTA: " + devices.toString());
     }
 
     public BluetoothDevice getDevice(String deviceName) {
