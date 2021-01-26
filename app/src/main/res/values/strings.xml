@@ -1,3 +1,4 @@
 <resources>
     <string name="app_name">GestureRecognition</string>
+    <string name="ble_not_supported">Bluetooth Low Energy not supported on this device</string>
 </resources>
