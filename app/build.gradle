@@ -45,4 +45,5 @@ dependencies {
     implementation 'com.mbientlab:metawear:3.7.0'
     implementation 'com.mbientlab.bletoolbox:scanner:0.2.3'
     implementation 'no.nordicsemi.android.support.v18:scanner:1.4.2'
+    implementation 'com.github.hsmnzaydn:easy-csv:1.0.0'
 }

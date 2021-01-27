@@ -13,9 +13,9 @@ import android.content.ServiceConnection;
 import android.content.pm.PackageManager;
 import android.location.LocationManager;
 import android.os.Bundle;
+import android.os.Environment;
 import android.os.Handler;
 import android.os.IBinder;
-import android.os.ParcelUuid;
 import android.util.Log;
 import android.widget.Button;
 import android.widget.Toast;
@@ -27,34 +27,36 @@ import androidx.core.app.ActivityCompat;
 import androidx.fragment.app.FragmentManager;
 import androidx.fragment.app.FragmentTransaction;
 
-import com.mbientlab.metawear.Data;
 import com.mbientlab.metawear.DeviceInformation;
 import com.mbientlab.metawear.MetaWearBoard;
 import com.mbientlab.metawear.Route;
 import com.mbientlab.metawear.Subscriber;
 import com.mbientlab.metawear.android.BtleService;
-import com.mbientlab.metawear.builder.RouteBuilder;
-import com.mbientlab.metawear.builder.RouteComponent;
 import com.mbientlab.metawear.data.Acceleration;
 import com.mbientlab.metawear.module.Accelerometer;
 import com.mbientlab.metawear.module.Led;
+
+import net.ozaydin.serkan.easy_csv.EasyCsv;
+import net.ozaydin.serkan.easy_csv.FileCallback;
 
 import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.File;
-import java.io.FileWriter;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.Calendar;
+import java.util.Date;
+import java.util.List;
+import java.util.Locale;
 
 import bolts.Continuation;
-import bolts.Task;
 
 public class MainActivity extends AppCompatActivity implements ServiceConnection {
     private static final int REQUEST_ENABLE_BT = 1;
     private static final int GPS_ENABLED = 2;
     private static final int STORAGE_REQUEST_CODE = 3;
     private static final int LOCATION_PERMISSION = 5;
+    private static final String PATH_DIR = "/Download/GestureRecognition/";
 
     public static BluetoothDevice bluetoothDevice;
     private BtleService.LocalBinder serviceBinder;
@@ -62,13 +64,14 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
 
     private MetaWearBoard board;
     private Accelerometer accelerometer;
-    private final ArrayList<JSONObject> dataSensor = new ArrayList<JSONObject>();
+    private final ArrayList<JSONObject> accelerometerDataJSON = new ArrayList<>();
+    private final List<String> accelerometerDataString = new ArrayList<>();
 
     private BluetoothAdapter bluetoothAdapter;
 
     private final GPSBroadcastReceiver gpsBroadcastReceiver = new GPSBroadcastReceiver();
-
-
+    private EasyCsv easyCsv;
+    double timestamp = 0;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -95,12 +98,14 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
         Button stop = findViewById(R.id.buttonStop);
         stop.setOnClickListener(v -> stopAccMeasurement());
 
-
         final BluetoothManager bluetoothManager = (BluetoothManager) getSystemService(Context.BLUETOOTH_SERVICE);
         bluetoothAdapter = bluetoothManager.getAdapter();
-        //connectedDevices = new ArrayList<>();
 
         registerReceiver(gpsBroadcastReceiver, new IntentFilter("android.location.PROVIDERS_CHANGED"));
+
+        easyCsv = new EasyCsv(this);
+        easyCsv.setSeparatorColumn(",");
+        easyCsv.setSeperatorLine(";");
     }
 
     @Override
@@ -145,8 +150,6 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
         ///< Typecast the binder to the service's LocalBinder class
         Log.d("board", "onServiceConnected");
         serviceBinder = (BtleService.LocalBinder) service;
-
-        //retrieveBoard();
     }
 
     public void retrieveBoard(String deviceName) {
@@ -175,7 +178,7 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
     }
 
     public void blinkLed() {
-        if (!board.isConnected()){
+        if (board == null || !board.isConnected()){
             Toast.makeText(MainActivity.this, "Please connect your sensor first", Toast.LENGTH_LONG).show();
             return;
         }
@@ -199,7 +202,6 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
         }
         else {
             Log.d("BleDevice", "Bluetooth attivo");
-            //requestPermissions(new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, PERMISSION_REQUEST_FINE_LOCATION);
 
             if(checkLocationPermission() && checkGpsEnabled()) {
                 toFragmentBleDevice();
@@ -208,40 +210,7 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
                 requestLocationPermissions();
                 Log.d("BleDevice", "requestLocation");
             }
-
-
         }
-
-        /*board.connectAsync().continueWith(new Continuation<Void, Void>() {
-            @Override
-            public Void then(Task<Void> task) throws Exception {
-                if (task.isFaulted()) {
-                    Log.d("board", "Failed to connect");
-                    return null;
-                }
-
-                try {
-                    runOnUiThread(() -> Toast.makeText(MainActivity.this, "Sensor connected", Toast.LENGTH_SHORT).show());
-                    Thread.sleep(300);
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
-
-                Log.d("board", "Connected");
-                Log.d("board", "board model = " + board.getModel());
-
-                board.readDeviceInformationAsync()
-                        .continueWith(new Continuation<DeviceInformation, Void>() {
-                            @Override
-                            public Void then(Task<DeviceInformation> task) throws Exception {
-                                Log.i("board", "Device Information: " + task.getResult());
-                                return null;
-                            }
-                        });
-
-                return null;
-            }
-        });*/
     }
 
     public void connectBoard() {
@@ -258,8 +227,7 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
                 e.printStackTrace();
             }
 
-            Log.d("board", "Connected");
-            Log.d("board", "board model = " + board.getModel());
+            Log.d("board", "Connected, board model: " + board.getModel());
 
             board.readDeviceInformationAsync()
                     .continueWith((Continuation<DeviceInformation, Void>) task1 -> {
@@ -272,7 +240,11 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
     }
 
     public void startAccMeasurement() {
-        if (!board.isConnected()){
+        accelerometerDataJSON.clear();
+        accelerometerDataString.clear();
+        timestamp = 0;
+
+        if (board == null || !board.isConnected()){
             Toast.makeText(MainActivity.this, "Sensor must be connected before starting measurement", Toast.LENGTH_LONG).show();
             return;
         }
@@ -285,20 +257,34 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
         accelerometer.start();
 
         accelerometer.acceleration().addRouteAsync(source -> source.stream((Subscriber) (data, env) -> {
-            Log.i("board", data.value(Acceleration.class).toString());
-            Log.i("board", String.valueOf(data.timestamp().getTimeInMillis()));
+            long epoch = data.timestamp().getTimeInMillis();
+
+            if(!accelerometerDataJSON.isEmpty()) {
+                int index = accelerometerDataJSON.size()-1;
+                try {
+                    timestamp += (epoch - accelerometerDataJSON.get(index).getDouble("epoch"))/1000;
+                } catch (JSONException e) {
+                    e.printStackTrace();
+                }
+            }
+
+            float x = data.value(Acceleration.class).x();
+            float y = data.value(Acceleration.class).y();
+            float z = data.value(Acceleration.class).z();
 
             JSONObject object = new JSONObject();
             try {
-                object.put("timestamp", String.valueOf(data.timestamp().getTimeInMillis()));
-                object.put("x", String.valueOf(data.value(Acceleration.class).x()));
-                object.put("y", String.valueOf(data.value(Acceleration.class).y()));
-                object.put("z", String.valueOf(data.value(Acceleration.class).z()));
+                object.put("epoch", epoch);
+                object.put("timestamp", timestamp);
+                object.put("x", x);
+                object.put("y", y);
+                object.put("z", z);
             } catch (JSONException e) {
                 e.printStackTrace();
             }
 
-            dataSensor.add(object);
+            accelerometerDataJSON.add(object);
+            accelerometerDataString.add(timestamp + "," + x + "," + y + "," + z + ";");
         })).continueWith((Continuation<Route, Void>) task -> {
             accelerometer.acceleration().start();
             accelerometer.start();
@@ -339,29 +325,31 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
     }
 
     public void writeDataOnDevice() {
-        File dir = new File(android.os.Environment.getExternalStorageDirectory().getAbsolutePath() + "/Download", "MyAppDataSensor");
-        if(!dir.exists()){
-            dir.mkdir();
-        }
+        List<String> headerList = new ArrayList<>();
+        headerList.add("Timestamp,x-axis,y-axis,z-axis;");
 
-        try {
-            File gpxfile = new File(dir, "Data Sensor - " + Calendar.getInstance().getTimeInMillis());
-            FileWriter writer = new FileWriter(gpxfile);
+        File accelerometerDir = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS + File.separator + "GestureRecognition"), "Accelerometer");
+        if(!accelerometerDir.exists()) accelerometerDir.mkdirs();
 
-            writer.append("timestamp, x-axis, y-axis, z-axis\n");
-            for(JSONObject a : dataSensor){
-                String timestamp = (String) a.get("timestamp") + ", ";
-                String x = (String) a.get("x") + ", ";
-                String y = (String) a.get("y") + ", ";
-                String z = (String) a.get("z") + "\n";
-                writer.append(timestamp).append(x).append(y).append(z);
-            }
-            writer.flush();
-            writer.close();
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd_HH-mm-ss", Locale.getDefault());
+        final String currentDateTime = sdf.format(new Date());
+        final String fileNameWithPath = PATH_DIR + "Accelerometer/registration_" + currentDateTime;
 
-            Toast.makeText(MainActivity.this, "Your file has been saved in folder " + dir, Toast.LENGTH_LONG).show();
-        } catch (Exception e){
-            e.printStackTrace();
+        // Scrittura dati accelerometro
+        if(!accelerometerDataString.isEmpty()) {
+            easyCsv.createCsvFile(fileNameWithPath, headerList, accelerometerDataString, STORAGE_REQUEST_CODE, new FileCallback() {
+                @Override
+                public void onSuccess(File file) {
+                    Log.d("EasyCsv", "Accelerometro file salvato: " + file.getName());
+                    Toast.makeText(MainActivity.this, "Your file has been saved in folder " + file.getName(), Toast.LENGTH_LONG).show();
+                }
+
+                @Override
+                public void onFail(String err) {
+                    Log.d("EasyCsv", "Accelerometro Errore: " + err);
+                    Toast.makeText(MainActivity.this, "ERROR: your file could not be saved", Toast.LENGTH_LONG).show();
+                }
+            });
         }
     }
 
