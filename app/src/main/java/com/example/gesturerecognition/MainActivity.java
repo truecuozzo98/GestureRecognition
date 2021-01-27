@@ -18,6 +18,7 @@ import android.os.Handler;
 import android.os.IBinder;
 import android.util.Log;
 import android.widget.Button;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
@@ -71,7 +72,10 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
 
     private final GPSBroadcastReceiver gpsBroadcastReceiver = new GPSBroadcastReceiver();
     private EasyCsv easyCsv;
+
     double timestamp = 0;
+    double last_gesture_timestamp = 0;
+    int gesture_counter = 0;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -243,6 +247,7 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
         accelerometerDataJSON.clear();
         accelerometerDataString.clear();
         timestamp = 0;
+        gesture_counter = 0;
 
         if (board == null || !board.isConnected()){
             Toast.makeText(MainActivity.this, "Sensor must be connected before starting measurement", Toast.LENGTH_LONG).show();
@@ -283,6 +288,12 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
                 e.printStackTrace();
             }
 
+            if(recognizeGesture1(epoch, x)) {
+                gesture_counter += 1;
+                Log.d("recognizeGesture1", "gesture 1 recognized");
+                blinkLed();
+            }
+
             accelerometerDataJSON.add(object);
             accelerometerDataString.add(timestamp + "," + x + "," + y + "," + z + ";");
         })).continueWith((Continuation<Route, Void>) task -> {
@@ -293,14 +304,29 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
         Toast.makeText(MainActivity.this, "Measurement started", Toast.LENGTH_SHORT).show();
     }
 
-    public void stopAccMeasurement(){
+    public boolean recognizeGesture1(double current_timestamp , double axix_data) {
+        double upper_threshold = 0.8;
+        double cooldown = 1000; //cooldown tra un gesto e l'altro di 2s
+
+        if(axix_data >= upper_threshold && (current_timestamp-last_gesture_timestamp) >= cooldown) {
+            last_gesture_timestamp = current_timestamp;
+            return true;
+        }
+
+        return false;
+    }
+
+    public void stopAccMeasurement() {
         if(board == null || accelerometer == null) { return; }
 
         accelerometer.stop();
         Toast.makeText(MainActivity.this, "Measurement stopped", Toast.LENGTH_SHORT).show();
 
+        TextView tv = findViewById(R.id.counter_gestures);
+        tv.setText(String.valueOf(gesture_counter));
+
         if (checkSelfPermission(android.Manifest.permission.WRITE_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED) {
-            (new Handler()).postDelayed(this::writeDataOnDevice, 200);
+            //(new Handler()).postDelayed(this::writeDataOnDevice, 200);
 
         } else {
             ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE}, STORAGE_REQUEST_CODE);
@@ -358,7 +384,10 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
         super.onDestroy();
         Log.d("board", "onDestroy");
 
-        board.tearDown();
+        if(board != null) {
+            board.tearDown();
+        }
+
         ///< Unbind the service when the activity is destroyed
         getApplicationContext().unbindService(this);
     }
