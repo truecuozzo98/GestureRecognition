@@ -65,7 +65,6 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
     private MetaWearBoard board;
     private Accelerometer accelerometer;
     private final ArrayList<JSONObject> accelerometerDataJSON = new ArrayList<>();
-    private final List<String> accelerometerDataString = new ArrayList<>();
 
     private BluetoothAdapter bluetoothAdapter;
 
@@ -251,7 +250,6 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
 
     public void startAccMeasurement() {
         accelerometerDataJSON.clear();
-        accelerometerDataString.clear();
         timestamp = 0;
         gesture_counter = 0;
         timestamp_lower_threshold = 0;
@@ -304,18 +302,15 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
 
             if(x > upper_threshold &&  diff < gesture_duration) {
                 Log.d("recognize", "timestamp_lower_threshold: " + timestamp_lower_threshold + " timestamp: " + epoch + " diff: " + diff);
-                if(recognizeGesture1(epoch, x)) {
+                if (recognizeGesture1(epoch, x)) {
                     gesture_counter += 1;
                     Log.d("recognizeGesture1", "gesture 1 recognized at timestamp: " + timestamp);
-                    timestamp_lower_threshold = 0 ;
+                    timestamp_lower_threshold = 0;
                     blinkLed();
                 }
-            } else {
-                //Log.d("recognize", "timestamp_lower_threshold: " + timestamp_lower_threshold + " timestamp: " + epoch + " diff: " + diff);
             }
 
             accelerometerDataJSON.add(object);
-            accelerometerDataString.add(timestamp + "," + x + "," + y + "," + z + ";");
         })).continueWith((Continuation<Route, Void>) task -> {
             accelerometer.acceleration().start();
             accelerometer.start();
@@ -327,7 +322,8 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
     public boolean recognizeGesture1(double current_timestamp, double axix_data) {
         double cooldown = 1000; //cooldown tra un gesto e l'altro di 1s
 
-        if(/*axix_data >= upper_threshold && */(current_timestamp - last_gesture_timestamp) >= cooldown) {
+        Log.d("recognize", "cooldown: " + (current_timestamp - last_gesture_timestamp));
+        if((current_timestamp - last_gesture_timestamp) >= cooldown) {
             last_gesture_timestamp = current_timestamp;
             return true;
         }
@@ -380,8 +376,8 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
         final String fileNameWithPath = PATH_DIR + "Accelerometer/registration_" + currentDateTime;
 
         // Scrittura dati accelerometro
-        if(!accelerometerDataString.isEmpty()) {
-            easyCsv.createCsvFile(fileNameWithPath, headerList, accelerometerDataString, STORAGE_REQUEST_CODE, new FileCallback() {
+        if(!accelerometerDataJSON.isEmpty()) {
+            easyCsv.createCsvFile(fileNameWithPath, headerList, fromJsonToStringCSV(accelerometerDataJSON), STORAGE_REQUEST_CODE, new FileCallback() {
                 @Override
                 public void onSuccess(File file) {
                     Log.d("EasyCsv", "Accelerometro file salvato: " + file.getName());
@@ -395,6 +391,18 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
                 }
             });
         }
+    }
+
+    public List<String> fromJsonToStringCSV (ArrayList<JSONObject> jsonArray) {
+        List<String> stringList = new ArrayList<>();
+        for (JSONObject x : jsonArray) {
+            try {
+                stringList.add(x.get("timestamp") + "," + x.get("x") + "," + x.get("y") + "," + x.get("z") + ";");
+            } catch (JSONException e) {
+                e.printStackTrace();
+            }
+        }
+        return stringList;
     }
 
     @Override
