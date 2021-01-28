@@ -14,7 +14,6 @@ import android.content.pm.PackageManager;
 import android.location.LocationManager;
 import android.os.Bundle;
 import android.os.Environment;
-import android.os.Handler;
 import android.os.IBinder;
 import android.util.Log;
 import android.widget.Button;
@@ -76,6 +75,13 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
     double timestamp = 0;
     double last_gesture_timestamp = 0;
     int gesture_counter = 0;
+
+    double lower_threshold = -1.1;
+    double upper_threshold = 0.6;
+    double timestamp_lower_threshold;
+    double timestamp_upper_threshold;
+    double gesture_duration = 3000;
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -248,6 +254,7 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
         accelerometerDataString.clear();
         timestamp = 0;
         gesture_counter = 0;
+        timestamp_lower_threshold = 0;
 
         if (board == null || !board.isConnected()){
             Toast.makeText(MainActivity.this, "Sensor must be connected before starting measurement", Toast.LENGTH_LONG).show();
@@ -288,10 +295,23 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
                 e.printStackTrace();
             }
 
-            if(recognizeGesture1(epoch, x)) {
-                gesture_counter += 1;
-                Log.d("recognizeGesture1", "gesture 1 recognized");
-                blinkLed();
+            if(x < lower_threshold) {
+                timestamp_lower_threshold = epoch;
+                //Log.d("recognize", "inside if lower; x: " + x + " timestamp_lower: " + timestamp_lower_threshold);
+            }
+
+            double diff = (epoch - timestamp_lower_threshold);
+
+            if(x > upper_threshold &&  diff < gesture_duration) {
+                Log.d("recognize", "timestamp_lower_threshold: " + timestamp_lower_threshold + " timestamp: " + epoch + " diff: " + diff);
+                if(recognizeGesture1(epoch, x)) {
+                    gesture_counter += 1;
+                    Log.d("recognizeGesture1", "gesture 1 recognized at timestamp: " + timestamp);
+                    timestamp_lower_threshold = 0 ;
+                    blinkLed();
+                }
+            } else {
+                //Log.d("recognize", "timestamp_lower_threshold: " + timestamp_lower_threshold + " timestamp: " + epoch + " diff: " + diff);
             }
 
             accelerometerDataJSON.add(object);
@@ -304,11 +324,10 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
         Toast.makeText(MainActivity.this, "Measurement started", Toast.LENGTH_SHORT).show();
     }
 
-    public boolean recognizeGesture1(double current_timestamp , double axix_data) {
-        double upper_threshold = 0.8;
-        double cooldown = 1000; //cooldown tra un gesto e l'altro di 2s
+    public boolean recognizeGesture1(double current_timestamp, double axix_data) {
+        double cooldown = 1000; //cooldown tra un gesto e l'altro di 1s
 
-        if(axix_data >= upper_threshold && (current_timestamp-last_gesture_timestamp) >= cooldown) {
+        if(/*axix_data >= upper_threshold && */(current_timestamp - last_gesture_timestamp) >= cooldown) {
             last_gesture_timestamp = current_timestamp;
             return true;
         }
@@ -326,8 +345,7 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
         tv.setText(String.valueOf(gesture_counter));
 
         if (checkSelfPermission(android.Manifest.permission.WRITE_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED) {
-            //(new Handler()).postDelayed(this::writeDataOnDevice, 200);
-
+            writeDataOnDevice();
         } else {
             ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE}, STORAGE_REQUEST_CODE);
         }
