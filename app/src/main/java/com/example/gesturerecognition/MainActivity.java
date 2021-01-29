@@ -111,6 +111,7 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
         bluetoothAdapter = bluetoothManager.getAdapter();
 
         registerReceiver(gpsBroadcastReceiver, new IntentFilter("android.location.PROVIDERS_CHANGED"));
+        this.registerReceiver(mReceiver, new IntentFilter(BluetoothAdapter.ACTION_STATE_CHANGED));
 
         easyCsv = new EasyCsv(this);
         easyCsv.setSeparatorColumn(",");
@@ -301,10 +302,10 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
             double diff = (epoch - timestamp_lower_threshold);
 
             if(x > upper_threshold &&  diff < gesture_duration) {
-                Log.d("recognize", "timestamp_lower_threshold: " + timestamp_lower_threshold + " timestamp: " + epoch + " diff: " + diff);
+                //Log.d("recognize", "timestamp_lower_threshold: " + timestamp_lower_threshold + " timestamp: " + epoch + " diff: " + diff);
                 if (recognizeGesture1(epoch, x)) {
                     gesture_counter += 1;
-                    Log.d("recognizeGesture1", "gesture 1 recognized at timestamp: " + timestamp);
+                    //Log.d("recognizeGesture1", "gesture 1 recognized at timestamp: " + timestamp);
                     timestamp_lower_threshold = 0;
                     blinkLed();
                 }
@@ -322,7 +323,7 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
     public boolean recognizeGesture1(double current_timestamp, double axix_data) {
         double cooldown = 1000; //cooldown tra un gesto e l'altro di 1s
 
-        Log.d("recognize", "cooldown: " + (current_timestamp - last_gesture_timestamp));
+        //Log.d("recognize", "cooldown: " + (current_timestamp - last_gesture_timestamp));
         if((current_timestamp - last_gesture_timestamp) >= cooldown) {
             last_gesture_timestamp = current_timestamp;
             return true;
@@ -422,10 +423,7 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
     public void onServiceDisconnected(ComponentName componentName) {
         Log.d("board", "onServiceDisconnected");
 
-        board.disconnectAsync().continueWith((Continuation<Void, Void>) task -> {
-            Log.i("board", "Disconnected");
-            return null;
-        });
+        disconnectBoard();
     }
 
     public boolean checkLocationPermission() {
@@ -465,9 +463,38 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
                     }
                 }
 
-            }catch (Exception e){
+            } catch (Exception e) {
                 Log.d("GPSBroadcastReceiver", e.toString());
             }
+        }
+    }
+
+    private final BroadcastReceiver mReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            String action = intent.getAction();
+
+            // It means the user has changed his bluetooth state.
+            if (action.equals(BluetoothAdapter.ACTION_STATE_CHANGED)) {
+                if (bluetoothAdapter.getState() == BluetoothAdapter.STATE_TURNING_OFF) {
+                    Log.d("bluetoothLOG", "The user bluetooth is turning off yet, but it is not disabled yet.");
+                    disconnectBoard();
+                }
+
+                if (bluetoothAdapter.getState() == BluetoothAdapter.STATE_OFF) {
+                    Log.d("bluetoothLOG", "The user bluetooth is already disabled.");
+                    disconnectBoard();
+                }
+            }
+        }
+    };
+
+    public void disconnectBoard() {
+        if(board != null) {
+            board.disconnectAsync().continueWith((Continuation<Void, Void>) task -> {
+                Log.i("board", "Disconnected");
+                return null;
+            });
         }
     }
 
