@@ -5,7 +5,11 @@ import android.view.View;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
+import androidx.appcompat.app.AppCompatActivity;
 import androidx.constraintlayout.widget.ConstraintLayout;
+import androidx.fragment.app.Fragment;
+import androidx.fragment.app.FragmentManager;
+import androidx.fragment.app.FragmentTransaction;
 import androidx.recyclerview.widget.RecyclerView;
 
 public class BleDeviceViewHolder extends RecyclerView.ViewHolder implements View.OnClickListener {
@@ -30,10 +34,16 @@ public class BleDeviceViewHolder extends RecyclerView.ViewHolder implements View
     @Override
     public void onClick(View v) {
         String deviceName = device_name.getText().toString();
+        BleDeviceListFragment.connected_device_name = deviceName;
 
         if (mContext instanceof MainActivity) {
             ((MainActivity) mContext).retrieveBoard(deviceName);
         }
+
+/*      FragmentManager fragmentManager = ((AppCompatActivity)v.getContext()).getSupportFragmentManager();
+        Fragment fragment = fragmentManager.findFragmentByTag("fragmentBleDevice");
+        FragmentTransaction transaction = fragmentManager.beginTransaction();
+        transaction.remove(fragment).commit();*/
 
         /*BleDeviceListFragment bleDevice = new BleDeviceListFragment();
         BluetoothDevice bluetoothDevice = bleDevice.getDevice(deviceName);

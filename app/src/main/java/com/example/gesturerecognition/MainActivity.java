@@ -24,6 +24,7 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
+import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentManager;
 import androidx.fragment.app.FragmentTransaction;
 
@@ -98,6 +99,9 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
         Button connect = findViewById(R.id.buttonConnect);
         connect.setOnClickListener(v -> connectTo());
 
+        Button disconnect = findViewById(R.id.disconnect_button);
+        disconnect.setOnClickListener(v -> disconnectBoard());
+
         Button led = findViewById(R.id.buttonLed);
         led.setOnClickListener(v -> blinkLed());
 
@@ -146,13 +150,22 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
         }
     }
 
+    public void removeFragment(String tag) {
+        Fragment fragment = getSupportFragmentManager().findFragmentByTag(tag);
+        if(fragment != null) {
+            getSupportFragmentManager().beginTransaction().remove(fragment).commit();
+        }
+    }
 
     public void toFragmentBleDevice() {
         Log.d("fragmentLOG", "toFragment");
+        Fragment fragment = new BleDeviceListFragment();
+
         FragmentManager fragmentManager = getSupportFragmentManager();
         FragmentTransaction fragmentTransaction = fragmentManager.beginTransaction();
-        fragmentTransaction.replace(R.id.fragment_container_ble, new BleDeviceListFragment(), "fragmentBleDevice");
-        fragmentTransaction.commitAllowingStateLoss();
+        fragmentTransaction.replace(R.id.fragment_container_ble, fragment, "fragmentBleDevice");
+        fragmentTransaction.addToBackStack("fragmentBleDevice");
+        fragmentTransaction.commit();
     }
 
     @Override
@@ -227,18 +240,21 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
         board.connectAsync().continueWith((Continuation<Void, Void>) task -> {
             if (task.isFaulted()) {
                 Log.d("board", "Failed to connect");
+                BleDeviceListFragment.connected_device_name = "";
                 return null;
             }
 
             try {
-                runOnUiThread(() -> Toast.makeText(MainActivity.this, "Sensor connected", Toast.LENGTH_SHORT).show());
+                runOnUiThread(() -> {
+                    removeFragment("fragmentBleDevice");
+                    Toast.makeText(MainActivity.this, "Sensor connected", Toast.LENGTH_SHORT).show();
+                });
                 Thread.sleep(300);
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
 
             Log.d("board", "Connected, board model: " + board.getModel());
-
             board.readDeviceInformationAsync()
                     .continueWith((Continuation<DeviceInformation, Void>) task1 -> {
                         Log.i("board", "Device Information: " + task1.getResult());
@@ -493,6 +509,8 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
         if(board != null) {
             board.disconnectAsync().continueWith((Continuation<Void, Void>) task -> {
                 Log.i("board", "Disconnected");
+                BleDeviceListFragment.connected_device_name = "";
+                runOnUiThread(() -> Toast.makeText(MainActivity.this, "Sensor disconnected", Toast.LENGTH_SHORT).show());
                 return null;
             });
         }
