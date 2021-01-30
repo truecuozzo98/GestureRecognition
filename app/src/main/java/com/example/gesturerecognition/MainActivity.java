@@ -1,22 +1,29 @@
 package com.example.gesturerecognition;
 
 import android.Manifest;
+import android.app.AlertDialog;
+import android.app.Dialog;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothManager;
 import android.content.BroadcastReceiver;
 import android.content.ComponentName;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.ServiceConnection;
 import android.content.pm.PackageManager;
+import android.graphics.drawable.ColorDrawable;
 import android.location.LocationManager;
 import android.os.Bundle;
 import android.os.Environment;
 import android.os.IBinder;
 import android.util.Log;
+import android.view.LayoutInflater;
+import android.view.View;
 import android.widget.Button;
+import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -24,6 +31,7 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
+import androidx.fragment.app.DialogFragment;
 import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentManager;
 import androidx.fragment.app.FragmentTransaction;
@@ -49,6 +57,7 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Locale;
+import java.util.Objects;
 
 import bolts.Continuation;
 
@@ -81,6 +90,8 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
     double timestamp_lower_threshold;
     double timestamp_upper_threshold;
     double gesture_duration = 3000;
+
+    public static AlertDialog connectDialog;
 
 
     @Override
@@ -237,22 +248,35 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
     }
 
     public void connectBoard() {
+        showConnectDialog();
+
         board.connectAsync().continueWith((Continuation<Void, Void>) task -> {
             if (task.isFaulted()) {
                 Log.d("board", "Failed to connect");
                 BleDeviceListFragment.connected_device_name = "";
+                disconnectBoard();
+                if(connectDialog != null && connectDialog.isShowing()) {
+                    connectDialog.dismiss();
+                }
+                retryConnectionDialog();
                 return null;
             }
 
-            try {
+            if(connectDialog != null && connectDialog.isShowing()) {
+                connectDialog.dismiss();
+            }
+            removeFragment("fragmentBleDevice");
+            //Toast.makeText(MainActivity.this, "Sensor connected", Toast.LENGTH_SHORT).show();
+            /*try {
                 runOnUiThread(() -> {
-                    removeFragment("fragmentBleDevice");
-                    Toast.makeText(MainActivity.this, "Sensor connected", Toast.LENGTH_SHORT).show();
+
                 });
                 Thread.sleep(300);
             } catch (InterruptedException e) {
                 e.printStackTrace();
-            }
+            }*/
+
+
 
             Log.d("board", "Connected, board model: " + board.getModel());
             board.readDeviceInformationAsync()
@@ -260,7 +284,6 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
                         Log.i("board", "Device Information: " + task1.getResult());
                         return null;
                     });
-
             return null;
         });
     }
@@ -516,4 +539,52 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
         }
     }
 
+    public void showConnectDialog() {
+        LayoutInflater layoutInflater = LayoutInflater.from(this);
+        final View dialogView = layoutInflater.inflate(R.layout.alert_dialog_connect_metawear, null);
+        connectDialog = new AlertDialog.Builder(this).create();
+        connectDialog.setView(dialogView);
+
+        connectDialog.getWindow().setBackgroundDrawable(new ColorDrawable(android.graphics.Color.TRANSPARENT));
+        connectDialog.getWindow().setBackgroundDrawableResource(android.R.color.transparent);
+
+        TextView device_tv = dialogView.findViewById((R.id.alert_dialog_connect_metawear_title));
+        String text = "Connecting to " + BleDeviceListFragment.connected_device_name + "...";
+        device_tv.setText(text);
+
+        Button undo_btn = dialogView.findViewById(R.id.undo_btn);
+        undo_btn.setOnClickListener(v -> {
+            connectDialog.dismiss();
+            disconnectBoard();
+        });
+
+        connectDialog.show();
+    }
+
+    public void retryConnectionDialog() {
+        LayoutInflater layoutInflater = LayoutInflater.from(this);
+        final View dialogView = layoutInflater.inflate(R.layout.alert_dialog_connect_metawear, null);
+        connectDialog = new AlertDialog.Builder(this).create();
+        connectDialog.setView(dialogView);
+
+        connectDialog.getWindow().setBackgroundDrawable(new ColorDrawable(android.graphics.Color.TRANSPARENT));
+        connectDialog.getWindow().setBackgroundDrawableResource(android.R.color.transparent);
+
+        TextView title = dialogView.findViewById(R.id.alert_dialog_connect_metawear_title);
+        TextView text = dialogView.findViewById(R.id.alert_dialog_connect_metawear_wait);
+        Button undo_btn = dialogView.findViewById(R.id.undo_btn);
+
+        title.setText("Connection failed");
+        text.setVisibility(View.GONE);
+        undo_btn.setText("Retry");
+
+        undo_btn.setOnClickListener(v -> {
+            connectDialog.dismiss();
+            showConnectDialog();
+            connectBoard();
+        });
+
+        connectDialog.show();
+    }
 }
+

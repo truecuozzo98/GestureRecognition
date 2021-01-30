@@ -6,4 +6,16 @@
     
     <color name="semi_transparent">#CC2B2F35</color>
     <color name="white">#FFFFFF</color>
+    <color name="emerald">#0CCE6B</color>
+    <color name="emerald_semitransparent">#CC0CCE6B</color>
+    <color name="dark_emerald">#0ab960</color>
+    <color name="blue">#4776E6</color>
+    <color name="purple">#8E54E9</color>
+    <color name="fucsia">#C025FF</color>
+    <color name="fucsia_semitransparent">#B5C025FF</color>
+    <color name="han_purple">#6200EE</color>
+    <color name="porpora">#500534</color>
+    <color name="orange">#FFA500</color>
+    <color name="red">#E9546C</color>
+    <color name="pink">#CE93D8</color>
 </resources>
