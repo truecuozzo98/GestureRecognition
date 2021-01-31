@@ -21,12 +21,12 @@
             android:id="@+id/alert_dialog_connect_metawear_title"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginStart="24dp"
-            android:layout_marginTop="24dp"
+            android:layout_marginStart="16dp"
+            android:layout_marginTop="16dp"
             android:text="Connecting to device..."
             android:textAlignment="center"
             android:textColor="@color/fucsia"
-            android:textSize="22sp"
+            android:textSize="18sp"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent" />
 
