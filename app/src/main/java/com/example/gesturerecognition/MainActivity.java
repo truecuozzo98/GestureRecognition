@@ -21,6 +21,7 @@ import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.Button;
+import android.widget.TextClock;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -81,13 +82,7 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
 
     double timestamp = 0;
     int gesture_counter = 0;
-    double gesture_duration = 3000;
-    double starting_value = -1.1;
-    double ending_value = 0.6;
-    boolean starting_value_found;
-    double timestamp_starting_value;
-
-
+    static boolean starting_value_found;
 
     private AlertDialog connectDialog;
 
@@ -282,8 +277,6 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
                 e.printStackTrace();
             }
 
-
-
             Log.d("board", "Connected, board model: " + board.getModel());
             board.readDeviceInformationAsync()
                     .continueWith((Continuation<DeviceInformation, Void>) task1 -> {
@@ -295,15 +288,25 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
     }
 
     public void startAccMeasurement() {
-        accelerometerDataJSON.clear();
-        timestamp = 0;
-        gesture_counter = 0;
-        starting_value_found = false;
-
         if (board == null || !board.isConnected()){
             Toast.makeText(MainActivity.this, "Sensor must be connected before starting measurement", Toast.LENGTH_LONG).show();
             return;
         }
+
+        timestamp = 0;
+        gesture_counter = 0;
+        starting_value_found = false;
+        GestureRecognizer gestureRecognizer = new GestureRecognizer(-1.1, 0.6, 3000);
+        gestureRecognizer.addGestureEventListener(new GestureEventListener() {
+            @Override
+            public void onGesture() {
+                gesture_counter += 1;
+                TextView tv = findViewById(R.id.counter_gestures);
+                runOnUiThread(() -> tv.setText(String.valueOf(gesture_counter)));
+            }
+        });
+
+        accelerometerDataJSON.clear();
 
         accelerometer = board.getModule(Accelerometer.class);
         accelerometer.configure()
@@ -314,6 +317,11 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
 
         accelerometer.acceleration().addRouteAsync(source -> source.stream((Subscriber) (data, env) -> {
             long epoch = data.timestamp().getTimeInMillis();
+            float x = data.value(Acceleration.class).x();
+            float y = data.value(Acceleration.class).y();
+            float z = data.value(Acceleration.class).z();
+
+            gestureRecognizer.recognizeGesture(x, epoch);
 
             if(!accelerometerDataJSON.isEmpty()) {
                 int index = accelerometerDataJSON.size()-1;
@@ -324,10 +332,6 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
                 }
             }
 
-            float x = data.value(Acceleration.class).x();
-            float y = data.value(Acceleration.class).y();
-            float z = data.value(Acceleration.class).z();
-
             JSONObject object = new JSONObject();
             try {
                 object.put("epoch", epoch);
@@ -337,23 +341,6 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
                 object.put("z", z);
             } catch (JSONException e) {
                 e.printStackTrace();
-            }
-
-            if(x < starting_value) {
-                starting_value_found = true;
-                timestamp_starting_value = epoch;
-            }
-
-            if(starting_value_found) {
-                if(x >= ending_value) {
-                    double diff = epoch - timestamp_starting_value;
-
-                    if(diff <= gesture_duration) {
-                        starting_value_found = false;
-                        gesture_counter += 1;
-                        Log.d("recognize", "gesture recognized " + gesture_counter + " times");
-                    }
-                }
             }
 
             accelerometerDataJSON.add(object);
@@ -370,9 +357,6 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
 
         accelerometer.stop();
         Toast.makeText(MainActivity.this, "Measurement stopped", Toast.LENGTH_SHORT).show();
-
-        TextView tv = findViewById(R.id.counter_gestures);
-        tv.setText(String.valueOf(gesture_counter));
 
         if (checkSelfPermission(android.Manifest.permission.WRITE_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED) {
             writeDataOnDevice();
