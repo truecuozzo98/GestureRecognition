@@ -2,14 +2,12 @@ package com.example.gesturerecognition;
 
 import android.Manifest;
 import android.app.AlertDialog;
-import android.app.Dialog;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothManager;
 import android.content.BroadcastReceiver;
 import android.content.ComponentName;
 import android.content.Context;
-import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.ServiceConnection;
@@ -23,7 +21,6 @@ import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.Button;
-import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -32,7 +29,6 @@ import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
-import androidx.fragment.app.DialogFragment;
 import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentManager;
 import androidx.fragment.app.FragmentTransaction;
@@ -58,7 +54,6 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Locale;
-import java.util.Objects;
 
 import bolts.Continuation;
 
@@ -67,9 +62,9 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
     private static final int GPS_ENABLED = 2;
     private static final int STORAGE_REQUEST_CODE = 3;
     private static final int LOCATION_PERMISSION = 5;
-    private static final String PATH_DIR = "/Download/GestureRecognition/";
     private static final int CONNECTION_DIALOG = 1;
     private static final int RETRY_CONNECTION_DIALOG = 2;
+    private static final String PATH_DIR = "/Download/GestureRecognition/";
 
     public static BluetoothDevice bluetoothDevice;
     private BtleService.LocalBinder serviceBinder;
@@ -85,14 +80,15 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
     private EasyCsv easyCsv;
 
     double timestamp = 0;
-    double last_gesture_timestamp = 0;
     int gesture_counter = 0;
-
-    double lower_threshold = -1.1;
-    double upper_threshold = 0.6;
-    double timestamp_lower_threshold;
-    double timestamp_upper_threshold;
     double gesture_duration = 3000;
+    double starting_value = -1.1;
+    double ending_value = 0.6;
+    boolean starting_value_found;
+    double timestamp_starting_value;
+
+
+
     private AlertDialog connectDialog;
 
     @Override
@@ -302,7 +298,7 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
         accelerometerDataJSON.clear();
         timestamp = 0;
         gesture_counter = 0;
-        timestamp_lower_threshold = 0;
+        starting_value_found = false;
 
         if (board == null || !board.isConnected()){
             Toast.makeText(MainActivity.this, "Sensor must be connected before starting measurement", Toast.LENGTH_LONG).show();
@@ -343,20 +339,20 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
                 e.printStackTrace();
             }
 
-            if(x < lower_threshold) {
-                timestamp_lower_threshold = epoch;
-                //Log.d("recognize", "inside if lower; x: " + x + " timestamp_lower: " + timestamp_lower_threshold);
+            if(x < starting_value) {
+                starting_value_found = true;
+                timestamp_starting_value = epoch;
             }
 
-            double diff = (epoch - timestamp_lower_threshold);
+            if(starting_value_found) {
+                if(x >= ending_value) {
+                    double diff = epoch - timestamp_starting_value;
 
-            if(x > upper_threshold &&  diff < gesture_duration) {
-                //Log.d("recognize", "timestamp_lower_threshold: " + timestamp_lower_threshold + " timestamp: " + epoch + " diff: " + diff);
-                if (recognizeGesture1(epoch, x)) {
-                    gesture_counter += 1;
-                    //Log.d("recognizeGesture1", "gesture 1 recognized at timestamp: " + timestamp);
-                    timestamp_lower_threshold = 0;
-                    blinkLed();
+                    if(diff <= gesture_duration) {
+                        starting_value_found = false;
+                        gesture_counter += 1;
+                        Log.d("recognize", "gesture recognized " + gesture_counter + " times");
+                    }
                 }
             }
 
@@ -367,18 +363,6 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
             return null;
         });
         Toast.makeText(MainActivity.this, "Measurement started", Toast.LENGTH_SHORT).show();
-    }
-
-    public boolean recognizeGesture1(double current_timestamp, double axix_data) {
-        double cooldown = 1000; //cooldown tra un gesto e l'altro di 1s
-
-        //Log.d("recognize", "cooldown: " + (current_timestamp - last_gesture_timestamp));
-        if((current_timestamp - last_gesture_timestamp) >= cooldown) {
-            last_gesture_timestamp = current_timestamp;
-            return true;
-        }
-
-        return false;
     }
 
     public void stopAccMeasurement() {
