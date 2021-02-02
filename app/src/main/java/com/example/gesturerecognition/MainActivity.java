@@ -21,7 +21,6 @@ import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.Button;
-import android.widget.TextClock;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -85,6 +84,8 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
     static boolean starting_value_found;
 
     private AlertDialog connectDialog;
+    public ArrayList<Gesture> gesture_list = new ArrayList<>();
+    public static ArrayList<JSONObject> all_gesture_list = new ArrayList<>();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -113,6 +114,9 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
 
         Button stop = findViewById(R.id.buttonStop);
         stop.setOnClickListener(v -> stopAccMeasurement());
+
+        Button gesture_list_button = findViewById(R.id.gesture_list_button);
+        gesture_list_button.setOnClickListener(v -> toGestureListFragment());
 
         final BluetoothManager bluetoothManager = (BluetoothManager) getSystemService(Context.BLUETOOTH_SERVICE);
         bluetoothAdapter = bluetoothManager.getAdapter();
@@ -161,13 +165,21 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
     }
 
     public void toFragmentBleDevice() {
-        Log.d("fragmentLOG", "toFragment");
         Fragment fragment = new BleDeviceListFragment();
 
         FragmentManager fragmentManager = getSupportFragmentManager();
         FragmentTransaction fragmentTransaction = fragmentManager.beginTransaction();
         fragmentTransaction.replace(R.id.fragment_container_ble, fragment, "fragmentBleDevice");
         fragmentTransaction.addToBackStack("fragmentBleDevice");
+        fragmentTransaction.commit();
+    }
+
+    public void toGestureListFragment() {
+        Fragment fragment = new GestureListFragment();
+        FragmentManager fragmentManager = getSupportFragmentManager();
+        FragmentTransaction fragmentTransaction = fragmentManager.beginTransaction();
+        fragmentTransaction.replace(R.id.fragment_container_ble, fragment, "gestureListFragment");
+        fragmentTransaction.addToBackStack("gestureListFragment");
         fragmentTransaction.commit();
     }
 
@@ -293,20 +305,26 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
             return;
         }
 
+        TextView tv = findViewById(R.id.counter_gestures);
+        tv.setText(String.valueOf(0));
+
         timestamp = 0;
         gesture_counter = 0;
         starting_value_found = false;
+        gesture_list.clear();
+        accelerometerDataJSON.clear();
+
         GestureRecognizer gestureRecognizer = new GestureRecognizer(-1.1, 0.6, 3000);
         gestureRecognizer.addGestureEventListener(new GestureEventListener() {
             @Override
-            public void onGesture() {
+            public void onGesture(double timestamp_start, double timestamp_ending) {
                 gesture_counter += 1;
                 TextView tv = findViewById(R.id.counter_gestures);
                 runOnUiThread(() -> tv.setText(String.valueOf(gesture_counter)));
+
+                gesture_list.add(new Gesture("gesture_1", timestamp_start, timestamp_ending));
             }
         });
-
-        accelerometerDataJSON.clear();
 
         accelerometer = board.getModule(Accelerometer.class);
         accelerometer.configure()
@@ -321,8 +339,6 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
             float y = data.value(Acceleration.class).y();
             float z = data.value(Acceleration.class).z();
 
-            gestureRecognizer.recognizeGesture(x, epoch);
-
             if(!accelerometerDataJSON.isEmpty()) {
                 int index = accelerometerDataJSON.size()-1;
                 try {
@@ -331,6 +347,8 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
                     e.printStackTrace();
                 }
             }
+
+            gestureRecognizer.recognizeGesture(x, timestamp);
 
             JSONObject object = new JSONObject();
             try {
@@ -355,11 +373,35 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
     public void stopAccMeasurement() {
         if(board == null || accelerometer == null) { return; }
 
+        if(!gesture_list.isEmpty()) {
+            SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd_HH-mm-ss", Locale.getDefault());
+            final String currentDateTime = sdf.format(new Date());
+
+            JSONObject jsonObject = new JSONObject();
+            try {
+                //ArrayList<Gesture> copy = new ArrayList<>(gesture_list);
+                jsonObject.put("date", currentDateTime);
+                jsonObject.put("gesture_list", new ArrayList<>(gesture_list));
+
+                all_gesture_list.add(jsonObject);
+
+                for(JSONObject x : all_gesture_list) {
+                    Log.d("allGesture", "x         : " + x.toString());
+                }
+            } catch (JSONException e) {
+                e.printStackTrace();
+            }
+            //Log.d("allGesture", "JSONObject: " + jsonObject.toString());
+        }
+
         accelerometer.stop();
         Toast.makeText(MainActivity.this, "Measurement stopped", Toast.LENGTH_SHORT).show();
 
+
+
+
         if (checkSelfPermission(android.Manifest.permission.WRITE_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED) {
-            writeDataOnDevice();
+            //writeDataOnDevice();
         } else {
             ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE}, STORAGE_REQUEST_CODE);
         }

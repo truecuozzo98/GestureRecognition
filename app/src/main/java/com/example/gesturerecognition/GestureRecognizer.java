@@ -3,7 +3,7 @@ package com.example.gesturerecognition;
 import java.util.ArrayList;
 
 interface GestureEventListener {
-    void onGesture();
+    void onGesture(double timestamp_start, double timestamp_ending);
 }
 
 public class GestureRecognizer {
@@ -37,20 +37,17 @@ public class GestureRecognizer {
 
                 if(diff <= getGestureDuration()) {
                     MainActivity.starting_value_found = false;
-                    gestureRecognized();
+                    gestureRecognized(getTimestampStartingValue(), epoch);
                 }
             }
         }
     }
 
-    public void gestureRecognized() {
-        gestureEventListenerList.forEach(GestureEventListener::onGesture);
+    public void gestureRecognized(double timestamp_start, double timestamp_ending) {
+        gestureEventListenerList.forEach(gestureEventListener -> {
+            gestureEventListener.onGesture(timestamp_start, timestamp_ending);
+        });
 
-        /*
-            gestureEventListenerList.forEach(gestureEventListener -> {
-                gestureEventListener.onGesture();
-            });
-        */
     }
 
     public double getStartingValue() {
