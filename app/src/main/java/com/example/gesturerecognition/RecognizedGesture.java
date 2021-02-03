@@ -16,7 +16,7 @@ public class RecognizedGesture {
         this.gestureName = gestureName;
         this.timestampStartingValue = timestampStartingValue;
         this.timestampEndingValue = timestampEndingValue;
-        this.gestureDuration = timestampStartingValue - timestampEndingValue;
+        this.gestureDuration = timestampEndingValue - timestampStartingValue;
         /*this.starting_value = starting_value;
         this.ending_value = ending_value;*/
     }

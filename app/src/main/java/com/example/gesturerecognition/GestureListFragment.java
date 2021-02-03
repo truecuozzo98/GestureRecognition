@@ -45,7 +45,7 @@ public class GestureListFragment extends Fragment {
                 try {
                     s.append(x.getString("date")).append(nl);
 
-                    ArrayList<RecognizedGesture> arrayListRecognizedGesture = (ArrayList<RecognizedGesture>) x.get("gesture_list");
+                    ArrayList<RecognizedGesture> arrayListRecognizedGesture = (ArrayList<RecognizedGesture>) x.get("gestureList");
                     for(RecognizedGesture g : arrayListRecognizedGesture) {
                         s.append(g.toStringRoundedDecimal()).append(nl);
                     }
