@@ -5,7 +5,6 @@ import android.os.Bundle;
 import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentTransaction;
 
-import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -15,7 +14,6 @@ import android.widget.TextView;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-import java.math.BigDecimal;
 import java.util.ArrayList;
 
 public class GestureListFragment extends Fragment {
@@ -26,6 +24,7 @@ public class GestureListFragment extends Fragment {
         super.onCreate(savedInstanceState);
     }
 
+    //TODO: non passare allGestureList come statico
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
@@ -34,26 +33,26 @@ public class GestureListFragment extends Fragment {
         back.setOnClickListener(v -> removeFragment("gestureListFragment"));
 
         String nl = System.getProperty("line.separator");
-        TextView gesture_list_tv = view.findViewById(R.id.gesture_list_tv);
+        TextView gestureListTv = view.findViewById(R.id.gesture_list_tv);
         StringBuilder s = new StringBuilder();
 
-        if(MainActivity.all_gesture_list.isEmpty()){
-            gesture_list_tv.setText("No gestures are registered yet");
+        if(MainActivity.allGestureList.isEmpty()){
+            gestureListTv.setText("No gestures are registered yet");
         } else {
-            gesture_list_tv.setText("");
+            gestureListTv.setText("");
 
-            for(JSONObject x : MainActivity.all_gesture_list ) {
+            for(JSONObject x : MainActivity.allGestureList) {
                 try {
                     s.append(x.getString("date")).append(nl);
 
-                    ArrayList<Gesture> arrayListGesture = (ArrayList<Gesture>) x.get("gesture_list");
-                    for(Gesture g : arrayListGesture) {
+                    ArrayList<RecognizedGesture> arrayListRecognizedGesture = (ArrayList<RecognizedGesture>) x.get("gesture_list");
+                    for(RecognizedGesture g : arrayListRecognizedGesture) {
                         s.append(g.toStringRoundedDecimal()).append(nl);
                     }
                 } catch (JSONException e) {
                     e.printStackTrace();
                 }
-                gesture_list_tv.setText(s.append(nl).append(nl));
+                gestureListTv.setText(s.append(nl).append(nl));
             }
         }
 

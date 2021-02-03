@@ -4,15 +4,11 @@ import android.annotation.SuppressLint;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothManager;
-import android.content.BroadcastReceiver;
 import android.content.Context;
-import android.content.Intent;
-import android.content.IntentFilter;
 import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.ParcelUuid;
-import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -33,7 +29,6 @@ import com.mbientlab.metawear.MetaWearBoard;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Set;
 
 import no.nordicsemi.android.support.v18.scanner.BluetoothLeScannerCompat;
 import no.nordicsemi.android.support.v18.scanner.ScanCallback;
@@ -55,12 +50,12 @@ public class BleDeviceListFragment extends Fragment {
     BleDeviceAdapter bleDeviceAdapter;
     BluetoothAdapter bluetoothAdapter;
 
-    public static String connected_device_name = "";
+    public static String connectedDeviceName = "";
     private Context mContext;
 
-    ConstraintLayout constraintLayoutMain, connected_device_layout;
-    ImageButton refresh_btn, close_btn;
-    TextView no_ble_device, connected_device_name_tv;
+    ConstraintLayout constraintLayoutMain, constraintLayout;
+    ImageButton refreshBtn, closeBtn;
+    TextView noBleDevice, connectedDeviceNameTv;
 
     @Override
     public void onAttach(@NonNull Context context) {
@@ -74,17 +69,17 @@ public class BleDeviceListFragment extends Fragment {
         View v = inflater.inflate(R.layout.fragment_ble_device, container, false);
         constraintLayoutMain = v.findViewById(R.id.constraintLayoutMain);
         constraintLayoutMain.setOnClickListener(onClickListener);
-        connected_device_layout = v.findViewById(R.id.connected_device);
-        connected_device_layout.setOnClickListener(onClickListener);
+        constraintLayout = v.findViewById(R.id.connected_device);
+        constraintLayout.setOnClickListener(onClickListener);
 
-        refresh_btn = v.findViewById(R.id.refresh_btn);
-        refresh_btn.setOnClickListener(onClickListener);
+        refreshBtn = v.findViewById(R.id.refresh_btn);
+        refreshBtn.setOnClickListener(onClickListener);
 
-        no_ble_device = v.findViewById(R.id.no_ble_device);
-        close_btn = v.findViewById(R.id.close_btn);
-        close_btn.setOnClickListener(onClickListener);
-        connected_device_name_tv = v.findViewById(R.id.connected_device_name);
-        close_btn.setOnClickListener(onClickListener);
+        noBleDevice = v.findViewById(R.id.no_ble_device);
+        closeBtn = v.findViewById(R.id.close_btn);
+        closeBtn.setOnClickListener(onClickListener);
+        connectedDeviceNameTv = v.findViewById(R.id.connected_device_name);
+        closeBtn.setOnClickListener(onClickListener);
         constraintLayoutMain = v.findViewById(R.id.constraintLayoutMain);
         constraintLayoutMain.setOnClickListener(onClickListener);
         
@@ -152,15 +147,15 @@ public class BleDeviceListFragment extends Fragment {
     }
 
     public void startScan() {
-        if (connected_device_name != null && !connected_device_name.equals("")){
-            connected_device_layout.setVisibility(View.VISIBLE);
-            connected_device_name_tv.setText(connected_device_name);
+        if (connectedDeviceName != null && !connectedDeviceName.equals("")){
+            constraintLayout.setVisibility(View.VISIBLE);
+            connectedDeviceNameTv.setText(connectedDeviceName);
         } else {
-            connected_device_layout.setVisibility(View.GONE);
+            constraintLayout.setVisibility(View.GONE);
         }
 
         recyclerView.removeAllViewsInLayout();
-        no_ble_device.setVisibility(View.VISIBLE);
+        noBleDevice.setVisibility(View.VISIBLE);
 
         if(!scanning) {
             devices.clear();
@@ -179,9 +174,9 @@ public class BleDeviceListFragment extends Fragment {
         public void onScanResult(int callbackType, @NonNull ScanResult result) {
             super.onScanResult(callbackType, result);
             if(bleDeviceAdapter.getItemCount() == 0) {
-                no_ble_device.setVisibility(View.VISIBLE);
+                noBleDevice.setVisibility(View.VISIBLE);
             } else {
-                no_ble_device.setVisibility(View.GONE);
+                noBleDevice.setVisibility(View.GONE);
             }
             addDevice(result.getDevice());
         }
@@ -203,7 +198,7 @@ public class BleDeviceListFragment extends Fragment {
     public void addDevice(BluetoothDevice bluetoothDevice) {
         if(!devices.contains(bluetoothDevice)){
             if(bluetoothDevice.getName() != null) {
-                no_ble_device.setVisibility(View.GONE);
+                noBleDevice.setVisibility(View.GONE);
                 devices.add(bluetoothDevice);
             }
         }

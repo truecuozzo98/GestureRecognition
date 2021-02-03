@@ -80,12 +80,12 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
     private EasyCsv easyCsv;
 
     double timestamp = 0;
-    int gesture_counter = 0;
-    static boolean starting_value_found;
+    int gestureCounter = 0;
 
     private AlertDialog connectDialog;
-    public ArrayList<Gesture> gesture_list = new ArrayList<>();
-    public static ArrayList<JSONObject> all_gesture_list = new ArrayList<>();
+    public ArrayList<RecognizedGesture> recognizedGestureList = new ArrayList<>();
+    public static ArrayList<JSONObject> allGestureList = new ArrayList<>();
+    private GestureRecognizer gestureRecognizer;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -103,7 +103,7 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
         Button connect = findViewById(R.id.buttonConnect);
         connect.setOnClickListener(v -> connectTo());
 
-        Button disconnect = findViewById(R.id.disconnect_button);
+        Button disconnect = findViewById(R.id.disconnectButton);
         disconnect.setOnClickListener(v -> disconnectBoard());
 
         Button led = findViewById(R.id.buttonLed);
@@ -115,8 +115,8 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
         Button stop = findViewById(R.id.buttonStop);
         stop.setOnClickListener(v -> stopAccMeasurement());
 
-        Button gesture_list_button = findViewById(R.id.gesture_list_button);
-        gesture_list_button.setOnClickListener(v -> toGestureListFragment());
+        Button gestureListButton = findViewById(R.id.gestureListButton);
+        gestureListButton.setOnClickListener(v -> toGestureListFragment());
 
         final BluetoothManager bluetoothManager = (BluetoothManager) getSystemService(Context.BLUETOOTH_SERVICE);
         bluetoothAdapter = bluetoothManager.getAdapter();
@@ -262,7 +262,8 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
                 }
                 createNewDialog(RETRY_CONNECTION_DIALOG).show();
 
-                BleDeviceListFragment.connected_device_name = "";
+                //TODO: rivedere attributi statici
+                BleDeviceListFragment.connectedDeviceName = "";
                 disconnectBoard();
                 return null;
             }
@@ -281,7 +282,7 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
 
                     tv = findViewById(R.id.device_name_main_activity);
                     tv.setVisibility(View.VISIBLE);
-                    String text = "Device name: " + BleDeviceListFragment.connected_device_name;
+                    String text = "Device name: " + BleDeviceListFragment.connectedDeviceName;
                     tv.setText(text);
                 });
                 Thread.sleep(300);
@@ -309,27 +310,27 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
         tv.setText(String.valueOf(0));
 
         timestamp = 0;
-        gesture_counter = 0;
-        starting_value_found = false;
-        gesture_list.clear();
+        gestureCounter = 0;
+        recognizedGestureList.clear();
         accelerometerDataJSON.clear();
 
-        GestureRecognizer gestureRecognizer = new GestureRecognizer(-1.1, 0.6, 3000);
+        gestureRecognizer = new GestureRecognizer("x", "gesture1", -1.1, 0.6, 3000);
         gestureRecognizer.addGestureEventListener(new GestureEventListener() {
             @Override
-            public void onGesture(double timestamp_start, double timestamp_ending) {
-                gesture_counter += 1;
+            public void onGesture(RecognizedGesture rg) {
+                Log.d("onGesture", "onGesture called, rg: " + rg.toStringRoundedDecimal());
+                gestureCounter += 1;
                 TextView tv = findViewById(R.id.counter_gestures);
-                runOnUiThread(() -> tv.setText(String.valueOf(gesture_counter)));
+                runOnUiThread(() -> tv.setText(String.valueOf(gestureCounter)));
 
-                gesture_list.add(new Gesture("gesture_1", timestamp_start, timestamp_ending));
+                recognizedGestureList.add(rg);
             }
         });
 
         accelerometer = board.getModule(Accelerometer.class);
         accelerometer.configure()
                 .odr(5f)       // Set sampling frequency to 25Hz, or closest valid ODR
-                .range(4f)      // Set data range to +/-4g, or closet valid range
+                .range(4f)     // Set data range to +/-4g, or closet valid range
                 .commit();
         accelerometer.start();
 
@@ -348,7 +349,7 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
                 }
             }
 
-            gestureRecognizer.recognizeGesture(x, timestamp);
+            gestureRecognizer.recognizeGesture(data, timestamp);
 
             JSONObject object = new JSONObject();
             try {
@@ -373,19 +374,18 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
     public void stopAccMeasurement() {
         if(board == null || accelerometer == null) { return; }
 
-        if(!gesture_list.isEmpty()) {
+        if(!recognizedGestureList.isEmpty()) {
             SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd_HH-mm-ss", Locale.getDefault());
             final String currentDateTime = sdf.format(new Date());
 
             JSONObject jsonObject = new JSONObject();
             try {
-                //ArrayList<Gesture> copy = new ArrayList<>(gesture_list);
                 jsonObject.put("date", currentDateTime);
-                jsonObject.put("gesture_list", new ArrayList<>(gesture_list));
+                jsonObject.put("gestureList", new ArrayList<>(recognizedGestureList));
 
-                all_gesture_list.add(jsonObject);
+                allGestureList.add(jsonObject);
 
-                for(JSONObject x : all_gesture_list) {
+                for(JSONObject x : allGestureList) {
                     Log.d("allGesture", "x         : " + x.toString());
                 }
             } catch (JSONException e) {
@@ -552,7 +552,7 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
         if(board != null) {
             board.disconnectAsync().continueWith((Continuation<Void, Void>) task -> {
                 Log.i("board", "Disconnected");
-                BleDeviceListFragment.connected_device_name = "";
+                BleDeviceListFragment.connectedDeviceName = "";
                 try {
                     runOnUiThread(() -> {
                         Toast.makeText(MainActivity.this, "Sensor disconnected", Toast.LENGTH_SHORT).show();
@@ -593,12 +593,12 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
         connectDialog.getWindow().setBackgroundDrawable(new ColorDrawable(android.graphics.Color.TRANSPARENT));
         connectDialog.getWindow().setBackgroundDrawableResource(android.R.color.transparent);
 
-        TextView device_tv = dialogView.findViewById((R.id.alert_dialog_connect_metawear_title));
-        String text = "Connecting to " + BleDeviceListFragment.connected_device_name + "...";
-        device_tv.setText(text);
+        TextView deviceTv = dialogView.findViewById((R.id.alert_dialog_connect_metawear_title));
+        String text = "Connecting to " + BleDeviceListFragment.connectedDeviceName + "...";
+        deviceTv.setText(text);
 
-        Button undo_btn = dialogView.findViewById(R.id.undo_btn);
-        undo_btn.setOnClickListener(v -> {
+        Button undoBtn = dialogView.findViewById(R.id.undo_btn);
+        undoBtn.setOnClickListener(v -> {
             connectDialog.dismiss();
             disconnectBoard();
         });
@@ -617,13 +617,13 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
 
         TextView title = dialogView.findViewById(R.id.alert_dialog_connect_metawear_title);
         TextView text = dialogView.findViewById(R.id.alert_dialog_connect_metawear_wait);
-        Button undo_btn = dialogView.findViewById(R.id.undo_btn);
+        Button undoBtn = dialogView.findViewById(R.id.undo_btn);
 
         title.setText("Connection failed");
         text.setVisibility(View.GONE);
-        undo_btn.setText("Retry");
+        undoBtn.setText("Retry");
 
-        undo_btn.setOnClickListener(v -> {
+        undoBtn.setOnClickListener(v -> {
             connectDialog.dismiss();
             createNewDialog(CONNECTION_DIALOG);
             connectBoard();

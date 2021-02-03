@@ -1,23 +1,35 @@
 package com.example.gesturerecognition;
 
+import android.util.Log;
+
+import com.mbientlab.metawear.Data;
+import com.mbientlab.metawear.data.Acceleration;
+
 import java.util.ArrayList;
 
 interface GestureEventListener {
-    void onGesture(double timestamp_start, double timestamp_ending);
+    void onGesture(RecognizedGesture gr);
 }
 
 public class GestureRecognizer {
-    private final double starting_value;
-    private final double ending_value;
-    private final double gesture_duration;
-    private double timestamp_starting_value = 0;
+    public final double startingValue;
+    public final double endingValue;
+    public final double gestureDuration;
+    private final String gestureName;
+    public final String axis;
+
+    public double timestampStartingValue = 0;
+    private boolean startingValueFound;
 
     ArrayList<GestureEventListener> gestureEventListenerList;
 
-    public GestureRecognizer(double starting_value, double ending_value, double gesture_duration) {
-        this.starting_value = starting_value;
-        this.ending_value = ending_value;
-        this.gesture_duration = gesture_duration;
+    //TODO: aggiungere riconoscimento nelle due direzioni
+    public GestureRecognizer(String axis, String gestureName, double startingValue, double endingValue, double gestureDuration) {
+        this.axis = axis;
+        this.gestureName = gestureName;
+        this.startingValue = startingValue;
+        this.endingValue = endingValue;
+        this.gestureDuration = gestureDuration;
         this.gestureEventListenerList = new ArrayList<>();
     }
 
@@ -25,48 +37,43 @@ public class GestureRecognizer {
         this.gestureEventListenerList.add(gestureEventListener);
     }
 
-    public void recognizeGesture(double value, double epoch) {
-        if(value < getStartingValue()) {
-            MainActivity.starting_value_found = true;
-            setTimestampStartingValue(epoch);
+    public void recognizeGesture(Data data, double epoch) {
+        double value;
+        switch (axis) {
+            case "x":
+                value = data.value(Acceleration.class).x();
+                break;
+            case "y":
+                value = data.value(Acceleration.class).y();
+                break;
+            case "z":
+                value = data.value(Acceleration.class).z();
+                break;
+            default:
+                throw new IllegalStateException("Unexpected value: " + axis);
         }
 
-        if(MainActivity.starting_value_found) {
-            if(value >= getEndingValue()) {
-                double diff = epoch - getTimestampStartingValue();
+        if(value < startingValue) {
+            startingValueFound = true;
+            timestampStartingValue = epoch;
+        }
 
-                if(diff <= getGestureDuration()) {
-                    MainActivity.starting_value_found = false;
-                    gestureRecognized(getTimestampStartingValue(), epoch);
+        if(startingValueFound) {
+            if(value >= endingValue) {
+                double diff = epoch - timestampStartingValue;
+
+                if(diff <= gestureDuration) {
+                    startingValueFound = false;
+                    gestureRecognized(timestampStartingValue, epoch);
                 }
             }
         }
     }
 
-    public void gestureRecognized(double timestamp_start, double timestamp_ending) {
-        gestureEventListenerList.forEach(gestureEventListener -> {
-            gestureEventListener.onGesture(timestamp_start, timestamp_ending);
-        });
-
-    }
-
-    public double getStartingValue() {
-        return starting_value;
-    }
-
-    public double getEndingValue() {
-        return ending_value;
-    }
-
-    public double getGestureDuration() {
-        return gesture_duration;
-    }
-
-    public void setTimestampStartingValue(double timestamp_starting_value) {
-        this.timestamp_starting_value = timestamp_starting_value;
-    }
-
-    public double getTimestampStartingValue() {
-        return timestamp_starting_value;
+    public void gestureRecognized(double timestampStart, double timestampEnding) {
+        RecognizedGesture rg = new RecognizedGesture(gestureName, timestampStart, timestampEnding);
+        for(GestureEventListener gel : gestureEventListenerList) {
+            gel.onGesture(rg);
+        }
     }
 }
