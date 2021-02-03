@@ -67,22 +67,20 @@ public class BleDeviceListFragment extends Fragment {
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
         View v = inflater.inflate(R.layout.fragment_ble_device, container, false);
+        noBleDevice = v.findViewById(R.id.no_ble_device);
+        connectedDeviceNameTv = v.findViewById(R.id.connected_device_name);
         constraintLayoutMain = v.findViewById(R.id.constraintLayoutMain);
         constraintLayoutMain.setOnClickListener(onClickListener);
         constraintLayout = v.findViewById(R.id.connected_device);
         constraintLayout.setOnClickListener(onClickListener);
-
-        refreshBtn = v.findViewById(R.id.refresh_btn);
-        refreshBtn.setOnClickListener(onClickListener);
-
-        noBleDevice = v.findViewById(R.id.no_ble_device);
-        closeBtn = v.findViewById(R.id.close_btn);
-        closeBtn.setOnClickListener(onClickListener);
-        connectedDeviceNameTv = v.findViewById(R.id.connected_device_name);
-        closeBtn.setOnClickListener(onClickListener);
         constraintLayoutMain = v.findViewById(R.id.constraintLayoutMain);
         constraintLayoutMain.setOnClickListener(onClickListener);
-        
+        refreshBtn = v.findViewById(R.id.refresh_btn);
+        refreshBtn.setOnClickListener(onClickListener);
+        closeBtn = v.findViewById(R.id.close_btn);
+        closeBtn.setOnClickListener(onClickListener);
+
+
         // Imposto RecyclerView e Adapter
         recyclerView = v.findViewById(R.id.recyclerView);
         recyclerView.setLayoutManager(new LinearLayoutManager(getContext(), LinearLayoutManager.VERTICAL, false));
@@ -237,24 +235,5 @@ public class BleDeviceListFragment extends Fragment {
             }
         }
     };
-
-    /*private final BroadcastReceiver mReceiver = new BroadcastReceiver() {
-        @Override
-        public void onReceive(Context context, Intent intent) {
-            String action = intent.getAction();
-
-            // When discovery finds a device
-            if (BluetoothDevice.ACTION_ACL_CONNECTED.equals(action)) {
-                Log.d("bluetoothReceiver", "new device");
-                BluetoothDevice device = intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE);
-                if(device.getName() == null) {
-                    connected_device_name.setVisibility(View.GONE);
-                } else {
-                    connected_device_name.setText(device.getName());
-                    connected_device_name.setVisibility(View.VISIBLE);
-                }
-            }
-        }
-    };*/
 }
 

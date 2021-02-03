@@ -35,20 +35,5 @@ public class BleDeviceViewHolder extends RecyclerView.ViewHolder implements View
         if (mContext instanceof MainActivity) {
             ((MainActivity) mContext).retrieveBoard(deviceName);
         }
-
-/*      FragmentManager fragmentManager = ((AppCompatActivity)v.getContext()).getSupportFragmentManager();
-        Fragment fragment = fragmentManager.findFragmentByTag("fragmentBleDevice");
-        FragmentTransaction transaction = fragmentManager.beginTransaction();
-        transaction.remove(fragment).commit();*/
-
-        /*BleDeviceListFragment bleDevice = new BleDeviceListFragment();
-        BluetoothDevice bluetoothDevice = bleDevice.getDevice(deviceName);
-
-        if(bluetoothDevice != null) {
-            FragmentManager fragmentManager = ((AppCompatActivity)v.getContext()).getSupportFragmentManager();
-            Fragment fragment = fragmentManager.findFragmentByTag("fragmentBleDevice");
-            FragmentTransaction transaction = fragmentManager.beginTransaction();
-            transaction.remove(fragment).commit();
-        }*/
     }
 }

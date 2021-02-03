@@ -8,7 +8,7 @@ public class RecognizedGesture {
     private String gestureName;
     private double timestampStartingValue;
     private double timestampEndingValue;
-    private double gestureDuration;
+    private final double gestureDuration;
     /*private double startingValue;
     private double endingValue;*/
 
@@ -43,6 +43,10 @@ public class RecognizedGesture {
 
     public void setTimestampEndingValue(double timestampEndingValue) {
         this.timestampEndingValue = timestampEndingValue;
+    }
+
+    public double getGestureDuration() {
+        return gestureDuration;
     }
 
     /*public double getStartingValue() {

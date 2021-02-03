@@ -3,6 +3,4 @@
     <string name="ble_not_supported">Bluetooth Low Energy not supported on this device</string>
     <string name="fragment_ble_no_devices_found">No BLE devices found! Try to scan again.</string>
     <string name="fragment_ble_available_devices">Available devices</string>
-    <!-- TODO: Remove or change this placeholder text -->
-    <string name="hello_blank_fragment">Hello blank fragment</string>
 </resources>
