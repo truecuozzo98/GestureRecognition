@@ -81,6 +81,7 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
 
     double timestamp = 0;
     int gestureCounter = 0;
+    int longTapGestureCounter = 0;
 
     private AlertDialog connectDialog;
     public ArrayList<RecognizedGesture> recognizedGestureList = new ArrayList<>();
@@ -169,7 +170,7 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
 
         FragmentManager fragmentManager = getSupportFragmentManager();
         FragmentTransaction fragmentTransaction = fragmentManager.beginTransaction();
-        fragmentTransaction.replace(R.id.fragment_container_ble, fragment, "fragmentBleDevice");
+        fragmentTransaction.replace(R.id.fragmentContainerBle, fragment, "fragmentBleDevice");
         fragmentTransaction.addToBackStack("fragmentBleDevice");
         fragmentTransaction.commit();
     }
@@ -178,7 +179,7 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
         Fragment fragment = new GestureListFragment();
         FragmentManager fragmentManager = getSupportFragmentManager();
         FragmentTransaction fragmentTransaction = fragmentManager.beginTransaction();
-        fragmentTransaction.replace(R.id.fragment_container_ble, fragment, "gestureListFragment");
+        fragmentTransaction.replace(R.id.fragmentContainerBle, fragment, "gestureListFragment");
         fragmentTransaction.addToBackStack("gestureListFragment");
         fragmentTransaction.commit();
     }
@@ -280,7 +281,7 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
                     tv.setText("Connected");
                     tv.setTextColor(ContextCompat.getColor(getApplicationContext(), R.color.emerald));
 
-                    tv = findViewById(R.id.device_name_main_activity);
+                    tv = findViewById(R.id.deviceNameMainActivity);
                     tv.setVisibility(View.VISIBLE);
                     String text = "Device name: " + BleDeviceListFragment.connectedDeviceName;
                     tv.setText(text);
@@ -306,11 +307,12 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
             return;
         }
 
-        TextView tv = findViewById(R.id.counter_gestures);
+        TextView tv = findViewById(R.id.counterGestures);
         tv.setText(String.valueOf(0));
 
         timestamp = 0;
         gestureCounter = 0;
+        longTapGestureCounter = 0;
         recognizedGestureList.clear();
         accelerometerDataJSON.clear();
 
@@ -320,8 +322,23 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
             public void onGesture(RecognizedGesture rg) {
                 Log.d("onGesture", "onGesture called, rg: " + rg.toStringRoundedDecimal());
                 gestureCounter += 1;
-                TextView tv = findViewById(R.id.counter_gestures);
+                TextView tv = findViewById(R.id.counterGestures);
                 runOnUiThread(() -> tv.setText(String.valueOf(gestureCounter)));
+
+                recognizedGestureList.add(rg);
+            }
+
+            @Override
+            public void onLongTapStart(double timestampStart) {
+                Log.d("longTap", "inizio longTap");
+            }
+
+            @Override
+            public void onLongTapEnd(RecognizedGesture rg) {
+                Log.d("longTap", "fine longTap, rg:" + rg.toStringRoundedDecimal());
+                longTapGestureCounter += 1;
+                TextView tv = findViewById(R.id.counterLongTapGestures);
+                runOnUiThread(() -> tv.setText(String.valueOf(longTapGestureCounter)));
 
                 recognizedGestureList.add(rg);
             }
@@ -560,7 +577,7 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
                         tv.setText("Not connected");
                         tv.setTextColor(ContextCompat.getColor(getApplicationContext(), R.color.red));
 
-                        tv = findViewById(R.id.device_name_main_activity);
+                        tv = findViewById(R.id.deviceNameMainActivity);
                         tv.setVisibility(View.GONE);
                     });
                     Thread.sleep(300);
