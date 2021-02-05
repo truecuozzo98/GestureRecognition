@@ -6,14 +6,18 @@ import java.math.BigDecimal;
 
 public class RecognizedGesture {
     private String gestureName;
+    private String type;
+
     private double timestampStartingValue;
     private double timestampEndingValue;
     private final double gestureDuration;
+
     /*private double startingValue;
     private double endingValue;*/
 
-    public RecognizedGesture(String gestureName, double timestampStartingValue, double timestampEndingValue /*, double starting_value, double ending_value*/) {
+    public RecognizedGesture(String gestureName, String type, double timestampStartingValue, double timestampEndingValue /*, double starting_value, double ending_value*/) {
         this.gestureName = gestureName;
+        this.type = type;
         this.timestampStartingValue = timestampStartingValue;
         this.timestampEndingValue = timestampEndingValue;
         this.gestureDuration = timestampEndingValue - timestampStartingValue;
@@ -76,7 +80,7 @@ public class RecognizedGesture {
         start = round((float) timestampStartingValue,2);
         end = round((float) timestampEndingValue,2);
         duration = round((float) gestureDuration,2);
-        return "name: " + gestureName + ", timestamp start: " + start + "s, timestamp end: " + end + "s, gesture duration: " + duration + "s";
+        return "name: " + gestureName + ", type: " + type + ", timestamp start: " + start + "s, timestamp end: " + end + "s, gesture duration: " + duration + "s";
 
     }
 

@@ -20,7 +20,10 @@ import android.os.IBinder;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
+import android.widget.AdapterView;
+import android.widget.ArrayAdapter;
 import android.widget.Button;
+import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -45,19 +48,24 @@ import com.mbientlab.metawear.module.Led;
 import net.ozaydin.serkan.easy_csv.EasyCsv;
 import net.ozaydin.serkan.easy_csv.FileCallback;
 
+import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 
 import bolts.Continuation;
 
-public class MainActivity extends AppCompatActivity implements ServiceConnection {
+public class MainActivity extends AppCompatActivity implements ServiceConnection, AdapterView.OnItemSelectedListener {
     private static final int REQUEST_ENABLE_BT = 1;
     private static final int GPS_ENABLED = 2;
     private static final int STORAGE_REQUEST_CODE = 3;
@@ -111,10 +119,10 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
         led.setOnClickListener(v -> blinkLed());
 
         Button start = findViewById(R.id.buttonStart);
-        start.setOnClickListener(v -> startAccMeasurement());
+        start.setOnClickListener(v -> startAccelerometer());
 
         Button stop = findViewById(R.id.buttonStop);
-        stop.setOnClickListener(v -> stopAccMeasurement());
+        stop.setOnClickListener(v -> stopAccelerometer());
 
         Button gestureListButton = findViewById(R.id.gestureListButton);
         gestureListButton.setOnClickListener(v -> toGestureListFragment());
@@ -128,6 +136,12 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
         easyCsv = new EasyCsv(this);
         easyCsv.setSeparatorColumn(",");
         easyCsv.setSeperatorLine(";");
+
+        Spinner spinner = findViewById(R.id.gesture_spinner);
+        ArrayAdapter<CharSequence> adapter = ArrayAdapter.createFromResource(this, R.array.gesture_array, android.R.layout.simple_spinner_item);
+        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        spinner.setAdapter(adapter);
+        spinner.setOnItemSelectedListener(this);
     }
 
     @Override
@@ -150,7 +164,7 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
 
             case GPS_ENABLED:
                 if(resultCode == RESULT_OK) {
-                    Log.d("PROVA", "Permessi location OK");
+                    Log.d("BleDevice", "Permessi location OK");
                     if(checkLocationPermission() && checkGpsEnabled())
                         toFragmentBleDevice();
                 }
@@ -186,7 +200,6 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
 
     @Override
     public void onServiceConnected(ComponentName name, IBinder service) {
-        ///< Typecast the binder to the service's LocalBinder class
         Log.d("board", "onServiceConnected");
         serviceBinder = (BtleService.LocalBinder) service;
     }
@@ -301,13 +314,15 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
         });
     }
 
-    public void startAccMeasurement() {
+    public void startAccelerometer() {
         if (board == null || !board.isConnected()){
             Toast.makeText(MainActivity.this, "Sensor must be connected before starting measurement", Toast.LENGTH_LONG).show();
             return;
         }
 
         TextView tv = findViewById(R.id.counterGestures);
+        tv.setText(String.valueOf(0));
+        tv = findViewById(R.id.counterLongTapGestures);
         tv.setText(String.valueOf(0));
 
         timestamp = 0;
@@ -316,7 +331,35 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
         recognizedGestureList.clear();
         accelerometerDataJSON.clear();
 
-        gestureRecognizer = new GestureRecognizer("x", "gesture1", -1.1, 0.6, 3000);
+        Spinner spinner = findViewById(R.id.gesture_spinner);
+        String text = spinner.getSelectedItem().toString();
+
+
+
+        /*
+        switch(text) {
+            case "Arm1":
+                gestureRecognizer = new GestureRecognizer(text, "x", "increasing", "accelerometer", -1.1, 0.6, 3000);
+                break;
+            case "Arm2":
+                gestureRecognizer = new GestureRecognizer(text, "x", "increasing", "accelerometer", -1.1, -0.1, 3000);
+                break;
+            case "Arm3":
+                gestureRecognizer = new GestureRecognizer(text, "x", "increasing", "gyro", -1.1, 0.6, 3000);
+                break;
+            case "Leg1":
+                gestureRecognizer = new GestureRecognizer(text, "y", "increasing", "accelerometer", -1.1, -0.7, 3000);
+                break;
+            case "Leg2":
+                gestureRecognizer = new GestureRecognizer(text, "x", "decreasing", "accelerometer", 1.4, 0.6, 3000);
+                break;
+            case "Jump":
+                gestureRecognizer = new GestureRecognizer(text, "x", "decreasing", "accelerometer", 2.0, -0.2, 3000);
+                break;
+        }*/
+
+        gestureRecognizer = initGestureRecognizer(text);
+
         gestureRecognizer.addGestureEventListener(new GestureEventListener() {
             @Override
             public void onGesture(RecognizedGesture rg) {
@@ -344,6 +387,41 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
             }
         });
 
+        getAccelerometerData();
+    }
+
+    private GestureRecognizer initGestureRecognizer(String text) {
+        GestureRecognizer gr = null;
+        Log.d("gestureParameters", "initGesture called");
+
+        try {
+            JSONObject jsonObject = new JSONObject(loadJSONGestureParameters());
+            JSONArray jsonArray = jsonObject.getJSONArray("gestures");
+            Log.d("gestureParameters", "size: " + jsonArray.length());
+
+            for (int i = 0; i < jsonArray.length() ; i++) {
+                Log.d("gestureParameters", String.valueOf(jsonArray.getJSONObject(i)));
+                String gestureName = jsonArray.getJSONObject(i).getString("name");
+                if(text.toLowerCase().equals(gestureName.toLowerCase())) {
+                    String axis = jsonArray.getJSONObject(i).getString("axis");
+                    String direction = jsonArray.getJSONObject(i).getString("direction");
+                    String sensor = jsonArray.getJSONObject(i).getString("sensor");
+                    double startingValue = jsonArray.getJSONObject(i).getDouble("startingValue");
+                    double endingValue = jsonArray.getJSONObject(i).getDouble("endingValue");
+                    double gestureDuration = jsonArray.getJSONObject(i).getDouble("gestureDuration");
+                    gr = new GestureRecognizer(gestureName, axis, direction, sensor, startingValue, endingValue, gestureDuration);
+                    Log.d("gestureParameters", "gestureName: " + gestureName + ", endingValue: " + endingValue);
+                    break;
+                }
+            }
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
+
+        return gr;
+    }
+
+    private void getAccelerometerData() {
         accelerometer = board.getModule(Accelerometer.class);
         accelerometer.configure()
                 .odr(5f)       // Set sampling frequency to 25Hz, or closest valid ODR
@@ -385,10 +463,10 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
             accelerometer.start();
             return null;
         });
-        Toast.makeText(MainActivity.this, "Measurement started", Toast.LENGTH_SHORT).show();
+        Toast.makeText(MainActivity.this, "Accelerometer started", Toast.LENGTH_SHORT).show();
     }
 
-    public void stopAccMeasurement() {
+    public void stopAccelerometer() {
         if(board == null || accelerometer == null) { return; }
 
         if(!recognizedGestureList.isEmpty()) {
@@ -412,16 +490,29 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
         }
 
         accelerometer.stop();
-        Toast.makeText(MainActivity.this, "Measurement stopped", Toast.LENGTH_SHORT).show();
-
-
-
+        Toast.makeText(MainActivity.this, "Accelerometer stopped", Toast.LENGTH_SHORT).show();
 
         if (checkSelfPermission(android.Manifest.permission.WRITE_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED) {
             //writeDataOnDevice();
         } else {
             ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE}, STORAGE_REQUEST_CODE);
         }
+    }
+
+    public String loadJSONGestureParameters() {
+        String json;
+        try {
+            InputStream is = getAssets().open("gestures_parameters.json");
+            int size = is.available();
+            byte[] buffer = new byte[size];
+            is.read(buffer);
+            is.close();
+            json = new String(buffer, StandardCharsets.UTF_8);
+        } catch (IOException ex) {
+            ex.printStackTrace();
+            return null;
+        }
+        return json;
     }
 
     @Override
@@ -648,5 +739,11 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
 
         return connectDialog;
     }
+
+    @Override
+    public void onItemSelected(AdapterView<?> adapterView, View view, int i, long l) { }
+
+    @Override
+    public void onNothingSelected(AdapterView<?> adapterView) { }
 }
 
