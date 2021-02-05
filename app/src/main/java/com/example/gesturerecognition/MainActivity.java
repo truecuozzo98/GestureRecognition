@@ -181,7 +181,6 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
 
     public void toFragmentBleDevice() {
         Fragment fragment = new BleDeviceListFragment();
-
         FragmentManager fragmentManager = getSupportFragmentManager();
         FragmentTransaction fragmentTransaction = fragmentManager.beginTransaction();
         fragmentTransaction.replace(R.id.fragmentContainerBle, fragment, "fragmentBleDevice");
@@ -334,32 +333,7 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
         Spinner spinner = findViewById(R.id.gesture_spinner);
         String text = spinner.getSelectedItem().toString();
 
-
-
-        /*
-        switch(text) {
-            case "Arm1":
-                gestureRecognizer = new GestureRecognizer(text, "x", "increasing", "accelerometer", -1.1, 0.6, 3000);
-                break;
-            case "Arm2":
-                gestureRecognizer = new GestureRecognizer(text, "x", "increasing", "accelerometer", -1.1, -0.1, 3000);
-                break;
-            case "Arm3":
-                gestureRecognizer = new GestureRecognizer(text, "x", "increasing", "gyro", -1.1, 0.6, 3000);
-                break;
-            case "Leg1":
-                gestureRecognizer = new GestureRecognizer(text, "y", "increasing", "accelerometer", -1.1, -0.7, 3000);
-                break;
-            case "Leg2":
-                gestureRecognizer = new GestureRecognizer(text, "x", "decreasing", "accelerometer", 1.4, 0.6, 3000);
-                break;
-            case "Jump":
-                gestureRecognizer = new GestureRecognizer(text, "x", "decreasing", "accelerometer", 2.0, -0.2, 3000);
-                break;
-        }*/
-
         gestureRecognizer = initGestureRecognizer(text);
-
         gestureRecognizer.addGestureEventListener(new GestureEventListener() {
             @Override
             public void onGesture(RecognizedGesture rg) {
@@ -392,15 +366,12 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
 
     private GestureRecognizer initGestureRecognizer(String text) {
         GestureRecognizer gr = null;
-        Log.d("gestureParameters", "initGesture called");
 
         try {
             JSONObject jsonObject = new JSONObject(loadJSONGestureParameters());
             JSONArray jsonArray = jsonObject.getJSONArray("gestures");
-            Log.d("gestureParameters", "size: " + jsonArray.length());
 
             for (int i = 0; i < jsonArray.length() ; i++) {
-                Log.d("gestureParameters", String.valueOf(jsonArray.getJSONObject(i)));
                 String gestureName = jsonArray.getJSONObject(i).getString("name");
                 if(text.toLowerCase().equals(gestureName.toLowerCase())) {
                     String axis = jsonArray.getJSONObject(i).getString("axis");
@@ -477,16 +448,10 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
             try {
                 jsonObject.put("date", currentDateTime);
                 jsonObject.put("gestureList", new ArrayList<>(recognizedGestureList));
-
                 allGestureList.add(jsonObject);
-
-                for(JSONObject x : allGestureList) {
-                    Log.d("allGesture", "x         : " + x.toString());
-                }
             } catch (JSONException e) {
                 e.printStackTrace();
             }
-            //Log.d("allGesture", "JSONObject: " + jsonObject.toString());
         }
 
         accelerometer.stop();
@@ -610,7 +575,6 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
             return true;
         }
     }
-
 
     public void requestLocationPermissions() {
         ActivityCompat.requestPermissions(this,

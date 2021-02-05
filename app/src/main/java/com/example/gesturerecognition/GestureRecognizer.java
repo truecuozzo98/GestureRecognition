@@ -1,7 +1,5 @@
 package com.example.gesturerecognition;
 
-import android.util.Log;
-
 import com.mbientlab.metawear.Data;
 import com.mbientlab.metawear.data.Acceleration;
 import com.mbientlab.metawear.data.AngularVelocity;
@@ -53,31 +51,13 @@ public class GestureRecognizer {
 
         switch (axis) {
             case "x":
-                if(sensor.equals("accelerometer")) {
-                    value = data.value(Acceleration.class).x();
-                } else if (sensor.equals("gyro")) {
-                    value = data.value(AngularVelocity.class).x();
-                } else {
-                    throw new IllegalStateException("Unexpected value: " + sensor);
-                }
+                value = returnXValue(data);
                 break;
             case "y":
-                if(sensor.equals("accelerometer")) {
-                    value = data.value(Acceleration.class).y();
-                } else if (sensor.equals("gyro")) {
-                    value = data.value(AngularVelocity.class).y();
-                } else {
-                    throw new IllegalStateException("Unexpected value: " + sensor);
-                }
+                value = returnYValue(data);
                 break;
             case "z":
-                if(sensor.equals("accelerometer")) {
-                    value = data.value(Acceleration.class).z();
-                } else if (sensor.equals("gyro")) {
-                    value = data.value(AngularVelocity.class).z();
-                } else {
-                    throw new IllegalStateException("Unexpected value: " + sensor);
-                }
+                value = returnZValue(data);
                 break;
             default:
                 throw new IllegalStateException("Unexpected value: " + axis);
@@ -92,28 +72,14 @@ public class GestureRecognizer {
 
                 if(startingValueFound) {
                     if(value >= endingValue) {
-                        double diff = epoch - timestampStartingValue;
-
-                        if(diff <= gestureDuration) {
-                            startingValueFound = false;
-                            gestureRecognized(timestampStartingValue, epoch);
-
-                            timestampLongTapStart = epoch;
-                            startingLongTapStartFound = true;
-                            longTapStartRecognized(timestampLongTapStart);
-                        }
+                        checkGestureIsRecognized(epoch);
                     }
                 }
 
                 longTapDuration = epoch - timestampLongTapStart;
                 if(startingLongTapStartFound) {
                     if (value < endingValue) {
-                        if(longTapDuration >= LONG_TAP_MIN_DURATION) { //riconosco un longTap se è più lungo di 2 secondi
-                            longTapEndRecognized(timestampLongTapStart, epoch);
-                        }
-
-                        startingLongTapStartFound = false;
-                        longTapDuration = 0;
+                        checkLongTapGestureIsRecognized(epoch);
                     }
                 }
                 break;
@@ -125,37 +91,20 @@ public class GestureRecognizer {
 
                 if(startingValueFound) {
                     if(value <= endingValue) {
-                        double diff = epoch - timestampStartingValue;
-
-                        if(diff <= gestureDuration) {
-                            startingValueFound = false;
-                            gestureRecognized(timestampStartingValue, epoch);
-
-                            timestampLongTapStart = epoch;
-                            startingLongTapStartFound = true;
-                            longTapStartRecognized(timestampLongTapStart);
-                        }
+                        checkGestureIsRecognized(epoch);
                     }
                 }
 
                 longTapDuration = epoch - timestampLongTapStart;
                 if(startingLongTapStartFound) {
                     if (value > endingValue) {
-                        //Log.d("longTap", "if value > ending, longTapDuration: " + longTapDuration);
-                        if(longTapDuration >= LONG_TAP_MIN_DURATION) { //riconosco un longTap se è più lungo di 1 secondo
-                            longTapEndRecognized(timestampLongTapStart, epoch);
-                        }
-
-                        startingLongTapStartFound = false;
-                        longTapDuration = 0;
+                        checkLongTapGestureIsRecognized(epoch);
                     }
                 }
                 break;
             default:
                 throw new IllegalStateException("Unexpected value: " + direction);
         }
-
-
     }
 
     public void gestureRecognized(double timestampStart, double timestampEnding) {
@@ -176,5 +125,57 @@ public class GestureRecognizer {
         for(GestureEventListener gel : gestureEventListenerList) {
             gel.onLongTapEnd(rg);
         }
+    }
+
+    private double returnXValue (Data data) {
+        if(sensor.equals("accelerometer")) {
+            return data.value(Acceleration.class).x();
+        } else if (sensor.equals("gyro")) {
+            return data.value(AngularVelocity.class).x();
+        } else {
+            throw new IllegalStateException("Unexpected value: " + sensor);
+        }
+    }
+
+    private double returnYValue (Data data) {
+        if(sensor.equals("accelerometer")) {
+            return data.value(Acceleration.class).y();
+        } else if (sensor.equals("gyro")) {
+            return data.value(AngularVelocity.class).y();
+        } else {
+            throw new IllegalStateException("Unexpected value: " + sensor);
+        }
+    }
+
+    private double returnZValue (Data data) {
+        if(sensor.equals("accelerometer")) {
+            return data.value(Acceleration.class).z();
+        } else if (sensor.equals("gyro")) {
+            return data.value(AngularVelocity.class).z();
+        } else {
+            throw new IllegalStateException("Unexpected value: " + sensor);
+        }
+    }
+
+    private void checkGestureIsRecognized(double epoch) {
+        double diff = epoch - timestampStartingValue;
+
+        if(diff <= gestureDuration) {
+            startingValueFound = false;
+            gestureRecognized(timestampStartingValue, epoch);
+
+            timestampLongTapStart = epoch;
+            startingLongTapStartFound = true;
+            longTapStartRecognized(timestampLongTapStart);
+        }
+    }
+
+    private void checkLongTapGestureIsRecognized(double epoch) {
+        if(longTapDuration >= LONG_TAP_MIN_DURATION) { //riconosco un longTap se è più lungo di 1 secondo
+            longTapEndRecognized(timestampLongTapStart, epoch);
+        }
+
+        startingLongTapStartFound = false;
+        longTapDuration = 0;
     }
 }
