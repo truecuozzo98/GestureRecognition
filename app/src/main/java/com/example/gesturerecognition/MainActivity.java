@@ -92,8 +92,8 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
 
     private AlertDialog connectDialog;
     public ArrayList<RecognizedGesture> recognizedGestureList = new ArrayList<>();
-    public static ArrayList<JSONObject> allGestureList = new ArrayList<>();
     private GestureRecognizer gestureRecognizer;
+    private Model model = Model.getInstance();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -273,9 +273,7 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
                     connectDialog.dismiss();
                 }
                 createNewDialog(RETRY_CONNECTION_DIALOG).show();
-
-                //TODO: rivedere attributi statici
-                BleDeviceListFragment.connectedDeviceName = "";
+                model.setConnectedDeviceName("");
                 disconnectBoard();
                 return null;
             }
@@ -294,7 +292,7 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
 
                     tv = findViewById(R.id.deviceNameMainActivity);
                     tv.setVisibility(View.VISIBLE);
-                    String text = "Device name: " + BleDeviceListFragment.connectedDeviceName;
+                    String text = "Device name: " + model.getConnectedDeviceName();
                     tv.setText(text);
                 });
                 Thread.sleep(300);
@@ -432,7 +430,8 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
             try {
                 jsonObject.put("date", currentDateTime);
                 jsonObject.put("gestureList", new ArrayList<>(recognizedGestureList));
-                allGestureList.add(jsonObject);
+                model.addGesture(jsonObject);
+                //allGestureList.add(jsonObject);
             } catch (JSONException e) {
                 e.printStackTrace();
             }
@@ -608,7 +607,7 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
         if(board != null) {
             board.disconnectAsync().continueWith((Continuation<Void, Void>) task -> {
                 Log.i("board", "Disconnected");
-                BleDeviceListFragment.connectedDeviceName = "";
+                model.setConnectedDeviceName("");
                 try {
                     runOnUiThread(() -> {
                         Toast.makeText(MainActivity.this, "Sensor disconnected", Toast.LENGTH_SHORT).show();
@@ -650,7 +649,7 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
         connectDialog.getWindow().setBackgroundDrawableResource(android.R.color.transparent);
 
         TextView deviceTv = dialogView.findViewById((R.id.alert_dialog_connect_metawear_title));
-        String text = "Connecting to " + BleDeviceListFragment.connectedDeviceName + "...";
+        String text = "Connecting to " + model.getConnectedDeviceName() + "...";
         deviceTv.setText(text);
 
         Button undoBtn = dialogView.findViewById(R.id.undo_btn);

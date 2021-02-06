@@ -41,6 +41,7 @@ public class BleDeviceListFragment extends Fragment {
     private boolean scanning = false;
     private final Handler handler = new Handler();
     private static final long SCAN_PERIOD = 10000;
+    //TODO: rivedere static
     public static ArrayList<BluetoothDevice> devices = new ArrayList<>();
     BluetoothLeScannerCompat bluetoothLeScanner;
     ScanSettings scanSettings;
@@ -50,12 +51,13 @@ public class BleDeviceListFragment extends Fragment {
     BleDeviceAdapter bleDeviceAdapter;
     BluetoothAdapter bluetoothAdapter;
 
-    public static String connectedDeviceName = "";
+    public String connectedDeviceName = "";
     private Context mContext;
 
     ConstraintLayout constraintLayoutMain, constraintLayout;
     ImageButton refreshBtn, closeBtn;
     TextView noBleDevice, connectedDeviceNameTv;
+    Model model = Model.getInstance();
 
     @Override
     public void onAttach(@NonNull Context context) {
@@ -145,9 +147,10 @@ public class BleDeviceListFragment extends Fragment {
     }
 
     public void startScan() {
-        if (connectedDeviceName != null && !connectedDeviceName.equals("")){
+        String name = model.getConnectedDeviceName();
+        if (name != null && !name.equals("")){
             constraintLayout.setVisibility(View.VISIBLE);
-            connectedDeviceNameTv.setText(connectedDeviceName);
+            connectedDeviceNameTv.setText(name);
         } else {
             constraintLayout.setVisibility(View.GONE);
         }
@@ -211,8 +214,10 @@ public class BleDeviceListFragment extends Fragment {
     }
 
     public void removeFragment(String tag) {
+        assert getFragmentManager() != null;
         Fragment fragment = getFragmentManager().findFragmentByTag(tag);
         FragmentTransaction transaction = getFragmentManager().beginTransaction();
+        assert fragment != null;
         transaction.remove(fragment).commit();
     }
 

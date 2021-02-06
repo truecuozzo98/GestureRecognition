@@ -30,9 +30,10 @@ public class BleDeviceViewHolder extends RecyclerView.ViewHolder implements View
     @Override
     public void onClick(View v) {
         String deviceName = this.deviceName.getText().toString();
-        BleDeviceListFragment.connectedDeviceName = deviceName;
+        Model.getInstance().setConnectedDeviceName(deviceName);
 
         if (mContext instanceof MainActivity) {
+            //TODO: trovare implementazione alternativa (retrieveBoard in Model?)
             ((MainActivity) mContext).retrieveBoard(deviceName);
         }
     }

@@ -24,7 +24,6 @@ public class GestureListFragment extends Fragment {
         super.onCreate(savedInstanceState);
     }
 
-    //TODO: non passare allGestureList come statico
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
@@ -36,12 +35,13 @@ public class GestureListFragment extends Fragment {
         TextView gestureListTv = view.findViewById(R.id.gesture_list_tv);
         StringBuilder s = new StringBuilder();
 
-        if(MainActivity.allGestureList.isEmpty()){
+        Model model = Model.getInstance();
+        if(model.isAllGestureListEmpty()){
             gestureListTv.setText("No gestures are registered yet");
         } else {
             gestureListTv.setText("");
 
-            for(JSONObject x : MainActivity.allGestureList) {
+            for(JSONObject x : model.getAllGestureList()) {
                 try {
                     s.append(x.getString("date")).append(nl);
 
@@ -60,8 +60,10 @@ public class GestureListFragment extends Fragment {
     }
 
     public void removeFragment(String tag) {
+        assert getFragmentManager() != null;
         Fragment fragment = getFragmentManager().findFragmentByTag(tag);
         FragmentTransaction transaction = getFragmentManager().beginTransaction();
+        assert fragment != null;
         transaction.remove(fragment).commit();
     }
 
