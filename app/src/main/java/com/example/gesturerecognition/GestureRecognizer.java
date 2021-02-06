@@ -1,5 +1,7 @@
 package com.example.gesturerecognition;
 
+import android.util.Log;
+
 import com.mbientlab.metawear.Data;
 import com.mbientlab.metawear.data.Acceleration;
 import com.mbientlab.metawear.data.AngularVelocity;
@@ -19,14 +21,14 @@ public class GestureRecognizer {
     public static final int AXIS_Z = 2;
 
     private final String gestureName;
-    public final int axis;
+    private final int axis;
     private final boolean increasing; //true se i dati tra la soglia di partenza e quella finale crescono (false viceversa)
-    public final int sensor;
-    public final double startingValue;
-    public final double endingValue;
+    private final int sensor;
+    private final double startingValue;
+    private final double endingValue;
 
-    public final double maxGestureDuration; //in millis
-    public double timestampStartingValue = 0;
+    private final double maxGestureDuration; //in millis
+    private double timestampStartingValue = 0;
     private boolean startingValueFound;
 
     //attributi longTap
@@ -144,5 +146,9 @@ public class GestureRecognizer {
             default:
                 throw new IllegalStateException("Unexpected value: " + sensor);
         }
+    }
+
+    public int getSensor() {
+        return sensor;
     }
 }

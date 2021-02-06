@@ -36,13 +36,18 @@ import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentManager;
 import androidx.fragment.app.FragmentTransaction;
 
+import com.mbientlab.metawear.Data;
 import com.mbientlab.metawear.DeviceInformation;
 import com.mbientlab.metawear.MetaWearBoard;
 import com.mbientlab.metawear.Route;
 import com.mbientlab.metawear.Subscriber;
 import com.mbientlab.metawear.android.BtleService;
+import com.mbientlab.metawear.builder.RouteBuilder;
+import com.mbientlab.metawear.builder.RouteComponent;
 import com.mbientlab.metawear.data.Acceleration;
+import com.mbientlab.metawear.data.AngularVelocity;
 import com.mbientlab.metawear.module.Accelerometer;
+import com.mbientlab.metawear.module.GyroBmi160;
 import com.mbientlab.metawear.module.Led;
 
 import net.ozaydin.serkan.easy_csv.EasyCsv;
@@ -63,6 +68,7 @@ import java.util.List;
 import java.util.Locale;
 
 import bolts.Continuation;
+import bolts.Task;
 
 public class MainActivity extends AppCompatActivity implements ServiceConnection, AdapterView.OnItemSelectedListener, BleDeviceViewHolder.AdapterCallback {
     private static final int REQUEST_ENABLE_BT = 1;
@@ -79,6 +85,7 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
 
     private MetaWearBoard board;
     private Accelerometer accelerometer;
+    private GyroBmi160 gyro;
     private final ArrayList<JSONObject> accelerometerDataJSON = new ArrayList<>();
 
     private BluetoothAdapter bluetoothAdapter;
@@ -118,10 +125,10 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
         led.setOnClickListener(v -> blinkLed());
 
         Button start = findViewById(R.id.buttonStart);
-        start.setOnClickListener(v -> startAccelerometer());
+        start.setOnClickListener(v -> startGettingData());
 
         Button stop = findViewById(R.id.buttonStop);
-        stop.setOnClickListener(v -> stopAccelerometer());
+        stop.setOnClickListener(v -> stopGettingData());
 
         Button gestureListButton = findViewById(R.id.gestureListButton);
         gestureListButton.setOnClickListener(v -> goToFragment("gestureListFragment"));
@@ -310,7 +317,7 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
         });
     }
 
-    public void startAccelerometer() {
+    public void startGettingData() {
         if (board == null || !board.isConnected()){
             Toast.makeText(MainActivity.this, "Sensor must be connected before starting measurement", Toast.LENGTH_LONG).show();
             return;
@@ -344,7 +351,14 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
             }
         });
 
-        getAccelerometerData();
+        if(gestureRecognizer.getSensor() == GestureRecognizer.SENSOR_ACCELEROMETER) {
+            getAccelerometerData();
+        } else {
+            getGyroData();
+        }
+
+        //getAccelerometerData();
+        //getGyroData();
     }
 
     private GestureRecognizer initGestureRecognizer(String text) {
@@ -380,8 +394,8 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
 
         accelerometer = board.getModule(Accelerometer.class);
         accelerometer.configure()
-                .odr(5f)       // Set sampling frequency to 25Hz, or closest valid ODR
-                .range(4f)     // Set data range to +/-4g, or closet valid range
+                .odr(5f)
+                .range(4f)
                 .commit();
         accelerometer.start();
 
@@ -418,8 +432,46 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
         Toast.makeText(MainActivity.this, "Accelerometer started", Toast.LENGTH_SHORT).show();
     }
 
-    public void stopAccelerometer() {
-        if(board == null || accelerometer == null) { return; }
+    private void getGyroData() {
+        timestamp = 0;
+
+        gyro = board.getModule(GyroBmi160.class);
+        gyro.configure()
+                .odr(GyroBmi160.OutputDataRate.ODR_25_HZ)
+                .range(GyroBmi160.Range.FSR_2000)
+                .commit();
+        gyro.start();
+
+        gyro.angularVelocity().addRouteAsync(new RouteBuilder() {
+            @Override
+            public void configure(RouteComponent source) {
+                source.stream(new Subscriber() {
+                    @Override
+                    public void apply(Data data, Object ... env) {
+                        long epoch = data.timestamp().getTimeInMillis();
+
+                        if(!(previousTimestamp == 0)) {
+                            timestamp += (epoch - previousTimestamp) / 1000;
+                        }
+                        previousTimestamp = epoch;
+                        gestureRecognizer.recognizeGesture(data, timestamp);
+                    }
+                });
+            }
+        }).continueWith(new Continuation<Route, Void>() {
+            @Override
+            public Void then(Task<Route> task) throws Exception {
+                gyro.angularVelocity().start();
+                gyro.start();
+                return null;
+            }
+        });
+
+        Toast.makeText(MainActivity.this, "Gyroscope started", Toast.LENGTH_SHORT).show();
+    }
+
+    public void stopGettingData() {
+        if(board == null) { return; }
 
         if(!recognizedGestureList.isEmpty()) {
             SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd_HH-mm-ss", Locale.getDefault());
@@ -435,8 +487,18 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
             }
         }
 
-        accelerometer.stop();
-        Toast.makeText(MainActivity.this, "Accelerometer stopped", Toast.LENGTH_SHORT).show();
+        Log.d("TEST", "TEST1");
+        if(gestureRecognizer.getSensor() == GestureRecognizer.SENSOR_ACCELEROMETER) {
+            if(accelerometer != null){
+                accelerometer.stop();
+            }
+        } else {
+            if(gyro != null) {
+                gyro.stop();
+            }
+        }
+        Log.d("TEST", "TEST2");
+        Toast.makeText(MainActivity.this, "stopped", Toast.LENGTH_SHORT).show();
 
         if (checkSelfPermission(android.Manifest.permission.WRITE_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED) {
             //writeDataOnDevice();

@@ -20,11 +20,11 @@
         }, 
         {
             "name": "arm3",
-            "axis": 0,
-            "increasing": true,
+            "axis": 2,
+            "increasing": false,
             "sensor": 1,
-            "startingValue": -1.1,
-            "endingValue": 0.6,
+            "startingValue": 150,
+            "endingValue": -150,
             "gestureDuration": 3000
         }, 
         {
@@ -41,8 +41,8 @@
             "axis": 0,
             "increasing": false,
             "sensor": 0,
-            "startingValue": 1.4,
-            "endingValue": 0.6,
+            "startingValue": 1.6,
+            "endingValue": 0.5,
             "gestureDuration": 3000
         }, 
         {
