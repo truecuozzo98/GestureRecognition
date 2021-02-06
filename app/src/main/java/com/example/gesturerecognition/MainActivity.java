@@ -87,6 +87,7 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
     private EasyCsv easyCsv;
 
     double timestamp = 0;
+    double previousTimestamp = 0;
     int gestureCounter = 0;
 
     private AlertDialog connectDialog;
@@ -123,7 +124,7 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
         stop.setOnClickListener(v -> stopAccelerometer());
 
         Button gestureListButton = findViewById(R.id.gestureListButton);
-        gestureListButton.setOnClickListener(v -> toGestureListFragment());
+        gestureListButton.setOnClickListener(v -> goToFragment("gestureListFragment"));
 
         final BluetoothManager bluetoothManager = (BluetoothManager) getSystemService(Context.BLUETOOTH_SERVICE);
         bluetoothAdapter = bluetoothManager.getAdapter();
@@ -151,7 +152,7 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
                     Log.d("BleDevice", "Bluetooth enabled");
 
                     if(checkLocationPermission() && checkGpsEnabled()){
-                        toFragmentBleDevice();
+                        goToFragment("fragmentBleDevice");
                     }
                 }
                 else {
@@ -164,7 +165,7 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
                 if(resultCode == RESULT_OK) {
                     Log.d("BleDevice", "Permessi location OK");
                     if(checkLocationPermission() && checkGpsEnabled())
-                        toFragmentBleDevice();
+                        goToFragment("fragmentBleDevice");
                 }
                 break;
         }
@@ -177,21 +178,22 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
         }
     }
 
-    public void toFragmentBleDevice() {
-        Fragment fragment = new BleDeviceListFragment();
-        FragmentManager fragmentManager = getSupportFragmentManager();
-        FragmentTransaction fragmentTransaction = fragmentManager.beginTransaction();
-        fragmentTransaction.replace(R.id.fragmentContainerBle, fragment, "fragmentBleDevice");
-        fragmentTransaction.addToBackStack("fragmentBleDevice");
-        fragmentTransaction.commit();
-    }
+    public void goToFragment(String tag) {
+        Fragment fragment = null;
+        switch (tag) {
+            case "fragmentBleDevice":
+                fragment = new BleDeviceListFragment();
+                break;
+            case "gestureListFragment":
+                fragment = new GestureListFragment();
+                break;
+        }
 
-    public void toGestureListFragment() {
-        Fragment fragment = new GestureListFragment();
         FragmentManager fragmentManager = getSupportFragmentManager();
         FragmentTransaction fragmentTransaction = fragmentManager.beginTransaction();
-        fragmentTransaction.replace(R.id.fragmentContainerBle, fragment, "gestureListFragment");
-        fragmentTransaction.addToBackStack("gestureListFragment");
+        assert fragment != null;
+        fragmentTransaction.replace(R.id.fragmentContainerBle, fragment, tag);
+        fragmentTransaction.addToBackStack("fragmentBleDevice");
         fragmentTransaction.commit();
     }
 
@@ -253,7 +255,7 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
             Log.d("BleDevice", "Bluetooth attivo");
 
             if(checkLocationPermission() && checkGpsEnabled()) {
-                toFragmentBleDevice();
+                goToFragment("fragmentBleDevice");
                 Log.d("BleDevice", "gps enabled");
             } else {
                 requestLocationPermissions();
@@ -373,6 +375,9 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
     }
 
     private void getAccelerometerData() {
+        timestamp = 0;
+        previousTimestamp = 0;
+
         accelerometer = board.getModule(Accelerometer.class);
         accelerometer.configure()
                 .odr(5f)       // Set sampling frequency to 25Hz, or closest valid ODR
@@ -386,14 +391,10 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
             float y = data.value(Acceleration.class).y();
             float z = data.value(Acceleration.class).z();
 
-            if(!accelerometerDataJSON.isEmpty()) {
-                int index = accelerometerDataJSON.size()-1;
-                try {
-                    timestamp += (epoch - accelerometerDataJSON.get(index).getDouble("epoch"))/1000;
-                } catch (JSONException e) {
-                    e.printStackTrace();
-                }
+            if(!(previousTimestamp == 0)) {
+                timestamp += (epoch - previousTimestamp) / 1000;
             }
+            previousTimestamp = epoch;
 
             gestureRecognizer.recognizeGesture(data, timestamp);
 
@@ -468,7 +469,7 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
             case LOCATION_PERMISSION:
                 startActivity(new Intent(android.provider.Settings.ACTION_LOCATION_SOURCE_SETTINGS));
                 if(checkLocationPermission()){
-                    toFragmentBleDevice();
+                    goToFragment("fragmentBleDevice");
                 }
                 break;
             case STORAGE_REQUEST_CODE:
@@ -577,7 +578,7 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
                 if (locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER)) {
                     Log.d("GPSBroadcastReceiver", "Broadcast receiver");
                     if(checkLocationPermission() && checkGpsEnabled()){
-                        toFragmentBleDevice();
+                        goToFragment("fragmentBleDevice");
                     }
                 }
 

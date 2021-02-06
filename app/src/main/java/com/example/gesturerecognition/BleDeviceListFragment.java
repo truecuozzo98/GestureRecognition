@@ -101,11 +101,7 @@ public class BleDeviceListFragment extends Fragment {
         // Se BLE non è supportato, chiudo il fragment
         if (!Objects.requireNonNull(getActivity()).getPackageManager().hasSystemFeature(PackageManager.FEATURE_BLUETOOTH_LE)) {
             Toast.makeText(getContext(), "BLE non supportato", Toast.LENGTH_SHORT).show();
-            assert getFragmentManager() != null;
-            Fragment fragment = getFragmentManager().findFragmentByTag("fragmentBleDevice");
-            FragmentTransaction transaction = getFragmentManager().beginTransaction();
-            assert fragment != null;
-            transaction.remove(fragment).commit();
+            removeFragment("fragmentBleDevice");
         }
         else {
             final BluetoothManager bluetoothManager = (BluetoothManager) getActivity().getSystemService(Context.BLUETOOTH_SERVICE);
