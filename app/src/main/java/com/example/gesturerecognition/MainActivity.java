@@ -59,13 +59,12 @@ import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 
 import bolts.Continuation;
 
-public class MainActivity extends AppCompatActivity implements ServiceConnection, AdapterView.OnItemSelectedListener {
+public class MainActivity extends AppCompatActivity implements ServiceConnection, AdapterView.OnItemSelectedListener, BleDeviceViewHolder.AdapterCallback {
     private static final int REQUEST_ENABLE_BT = 1;
     private static final int GPS_ENABLED = 2;
     private static final int STORAGE_REQUEST_CODE = 3;
@@ -93,7 +92,7 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
     private AlertDialog connectDialog;
     public ArrayList<RecognizedGesture> recognizedGestureList = new ArrayList<>();
     private GestureRecognizer gestureRecognizer;
-    private Model model = Model.getInstance();
+    private final Model model = Model.getInstance();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -283,7 +282,6 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
             }
             removeFragment("fragmentBleDevice");
 
-            //Toast.makeText(MainActivity.this, "Sensor connected", Toast.LENGTH_SHORT).show();
             try {
                 runOnUiThread(() -> {
                     TextView tv = findViewById(R.id.status);
@@ -431,7 +429,6 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
                 jsonObject.put("date", currentDateTime);
                 jsonObject.put("gestureList", new ArrayList<>(recognizedGestureList));
                 model.addGesture(jsonObject);
-                //allGestureList.add(jsonObject);
             } catch (JSONException e) {
                 e.printStackTrace();
             }
@@ -485,13 +482,15 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
         headerList.add("Timestamp,x-axis,y-axis,z-axis;");
 
         File accelerometerDir = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS + File.separator + "GestureRecognition"), "Accelerometer");
-        if(!accelerometerDir.exists()) accelerometerDir.mkdirs();
+        if(!accelerometerDir.exists()) {
+            accelerometerDir.mkdirs();
+        }
 
         SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd_HH-mm-ss", Locale.getDefault());
         final String currentDateTime = sdf.format(new Date());
         final String fileNameWithPath = PATH_DIR + "Accelerometer/registration_" + currentDateTime;
 
-        // Scrittura dati accelerometro
+        //Scrittura dati accelerometro
         if(!accelerometerDataJSON.isEmpty()) {
             easyCsv.createCsvFile(fileNameWithPath, headerList, fromJsonToStringCSV(accelerometerDataJSON), STORAGE_REQUEST_CODE, new FileCallback() {
                 @Override
@@ -563,6 +562,11 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
         ActivityCompat.requestPermissions(this,
                 new String[]{Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION},
                 LOCATION_PERMISSION);
+    }
+
+    @Override
+    public void onMethodCallback() {
+        retrieveBoard(model.getConnectedDeviceName());
     }
 
     public class GPSBroadcastReceiver extends BroadcastReceiver {

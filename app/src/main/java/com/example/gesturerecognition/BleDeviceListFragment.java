@@ -29,6 +29,7 @@ import com.mbientlab.metawear.MetaWearBoard;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 import no.nordicsemi.android.support.v18.scanner.BluetoothLeScannerCompat;
 import no.nordicsemi.android.support.v18.scanner.ScanCallback;
@@ -38,9 +39,10 @@ import no.nordicsemi.android.support.v18.scanner.ScanSettings;
 
 // Fragment per la scansione dei dispositivi BLE
 public class BleDeviceListFragment extends Fragment {
+    private static final long SCAN_PERIOD = 10000;
+
     private boolean scanning = false;
     private final Handler handler = new Handler();
-    private static final long SCAN_PERIOD = 10000;
     //TODO: rivedere static
     public static ArrayList<BluetoothDevice> devices = new ArrayList<>();
     BluetoothLeScannerCompat bluetoothLeScanner;
@@ -51,7 +53,6 @@ public class BleDeviceListFragment extends Fragment {
     BleDeviceAdapter bleDeviceAdapter;
     BluetoothAdapter bluetoothAdapter;
 
-    public String connectedDeviceName = "";
     private Context mContext;
 
     ConstraintLayout constraintLayoutMain, constraintLayout;
@@ -90,7 +91,6 @@ public class BleDeviceListFragment extends Fragment {
         recyclerView.setAdapter(bleDeviceAdapter);
         bleDeviceAdapter.notifyDataSetChanged();
 
-        //requireActivity().registerReceiver(mReceiver, new IntentFilter(BluetoothAdapter.ACTION_STATE_CHANGED));
         return v;
     }
 
@@ -99,10 +99,12 @@ public class BleDeviceListFragment extends Fragment {
         super.onStart();
 
         // Se BLE non è supportato, chiudo il fragment
-        if (!getActivity().getPackageManager().hasSystemFeature(PackageManager.FEATURE_BLUETOOTH_LE)) {
+        if (!Objects.requireNonNull(getActivity()).getPackageManager().hasSystemFeature(PackageManager.FEATURE_BLUETOOTH_LE)) {
             Toast.makeText(getContext(), "BLE non supportato", Toast.LENGTH_SHORT).show();
+            assert getFragmentManager() != null;
             Fragment fragment = getFragmentManager().findFragmentByTag("fragmentBleDevice");
             FragmentTransaction transaction = getFragmentManager().beginTransaction();
+            assert fragment != null;
             transaction.remove(fragment).commit();
         }
         else {

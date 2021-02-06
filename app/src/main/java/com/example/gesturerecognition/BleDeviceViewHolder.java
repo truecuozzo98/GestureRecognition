@@ -12,7 +12,7 @@ public class BleDeviceViewHolder extends RecyclerView.ViewHolder implements View
     TextView deviceName;
     BleDeviceListFragment bleDevice;
     ConstraintLayout bluetoothItem;
-    private final Context mContext;
+    private AdapterCallback adapterCallback;
 
     public BleDeviceViewHolder(@NonNull View itemView, BleDeviceListFragment bleDevice, Context context) {
         super(itemView);
@@ -20,7 +20,7 @@ public class BleDeviceViewHolder extends RecyclerView.ViewHolder implements View
         bluetoothItem = itemView.findViewById(R.id.bluetoothItem);
         bluetoothItem.setOnClickListener(this);
         this.bleDevice = bleDevice;
-        mContext = context;
+        adapterCallback = ((AdapterCallback) context);
     }
 
     public void setCell(String name) {
@@ -31,10 +31,10 @@ public class BleDeviceViewHolder extends RecyclerView.ViewHolder implements View
     public void onClick(View v) {
         String deviceName = this.deviceName.getText().toString();
         Model.getInstance().setConnectedDeviceName(deviceName);
+        adapterCallback.onMethodCallback();
+    }
 
-        if (mContext instanceof MainActivity) {
-            //TODO: trovare implementazione alternativa (retrieveBoard in Model?)
-            ((MainActivity) mContext).retrieveBoard(deviceName);
-        }
+    public interface AdapterCallback {
+        void onMethodCallback();
     }
 }

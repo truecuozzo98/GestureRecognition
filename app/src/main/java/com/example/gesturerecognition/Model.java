@@ -1,15 +1,12 @@
 package com.example.gesturerecognition;
 
-import android.util.JsonReader;
-
 import org.json.JSONObject;
-
 import java.util.ArrayList;
 
 public class Model {
     private static final Model ourInstance = new Model();
-    public static ArrayList<JSONObject> allGestureList;
-    public static String connectedDeviceName = null;
+    public ArrayList<JSONObject> allGestureList;
+    public String connectedDeviceName = null;
 
     public static Model getInstance() {
         return ourInstance;
@@ -32,7 +29,7 @@ public class Model {
     }
 
     public void setConnectedDeviceName(String connectedDeviceName) {
-        Model.connectedDeviceName = connectedDeviceName;
+        this.connectedDeviceName = connectedDeviceName;
     }
 
     public String getConnectedDeviceName() {
