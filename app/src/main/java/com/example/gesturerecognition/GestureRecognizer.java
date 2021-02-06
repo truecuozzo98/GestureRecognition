@@ -7,38 +7,48 @@ import com.mbientlab.metawear.data.AngularVelocity;
 import java.util.ArrayList;
 
 interface GestureEventListener {
-    void onGesture(RecognizedGesture gr);
-    void onLongTapStart(double timestampStart);
-    void onLongTapEnd(RecognizedGesture gr);
+    void onGestureStarts(double timestampStart, double timestampEnding);
+    void onGestureEnds(RecognizedGesture gr);
 }
 
 public class GestureRecognizer {
-    private static final double LONG_TAP_MIN_DURATION = 1;
+    public static final int SENSOR_ACCELEROMETER = 0;
+    public static final int SENSOR_GYRO = 1;
+    public static final int AXIS_X = 0;
+    public static final int AXIS_Y = 1;
+    public static final int AXIS_Z = 2;
+
     private final String gestureName;
-    public final String axis;
-    private final String direction;
-    public final String sensor;
+    public final int axis;
+    private final boolean increasing; //true se i dati tra la soglia di partenza e quella finale crescono (false viceversa)
+    public final int sensor;
     public final double startingValue;
     public final double endingValue;
-    public final double gestureDuration;
+
+    public final double maxGestureDuration; //in millis
     public double timestampStartingValue = 0;
     private boolean startingValueFound;
 
     //attributi longTap
-    private double timestampLongTapStart = 0;
-    private boolean startingLongTapStartFound;
-    double longTapDuration = 0;
+    private double gestureStartedTimestamp = 0;
+    private boolean startingGestureFound;
 
     ArrayList<GestureEventListener> gestureEventListenerList;
 
-    public GestureRecognizer(String gestureName, String axis, String direction, String sensor, double startingValue, double endingValue, double gestureDuration) {
+    public GestureRecognizer(String gestureName, int axis, boolean increasing, int sensor, double startingValue, double endingValue, double maxGestureDuration) {
         this.gestureName = gestureName;
         this.axis = axis;
-        this.direction = direction;
+        this.increasing = increasing;
         this.sensor = sensor;
-        this.startingValue = startingValue;
-        this.endingValue = endingValue;
-        this.gestureDuration = gestureDuration;
+        if(increasing) {
+            this.startingValue = startingValue;
+            this.endingValue = endingValue;
+        } else {
+            this.startingValue = -1 * startingValue;
+            this.endingValue = -1 * endingValue;
+        }
+
+        this.maxGestureDuration = maxGestureDuration;
         this.gestureEventListenerList = new ArrayList<>();
     }
 
@@ -50,132 +60,89 @@ public class GestureRecognizer {
         double value;
 
         switch (axis) {
-            case "x":
+            case AXIS_X:
                 value = returnXValue(data);
                 break;
-            case "y":
+            case AXIS_Y:
                 value = returnYValue(data);
                 break;
-            case "z":
+            case AXIS_Z:
                 value = returnZValue(data);
                 break;
             default:
                 throw new IllegalStateException("Unexpected value: " + axis);
         }
 
-        switch (direction) {
-            case "increasing":
-                if(value < startingValue) {
-                    startingValueFound = true;
-                    timestampStartingValue = epoch;
-                }
+        if(!increasing){
+            value = -1 * value;
+        }
 
-                if(startingValueFound) {
-                    if(value >= endingValue) {
-                        checkGestureIsRecognized(epoch);
-                    }
-                }
+        if(value < startingValue) {
+            startingValueFound = true;
+            timestampStartingValue = epoch;
+        }
 
-                longTapDuration = epoch - timestampLongTapStart;
-                if(startingLongTapStartFound) {
-                    if (value < endingValue) {
-                        checkLongTapGestureIsRecognized(epoch);
-                    }
-                }
-                break;
-            case "decreasing":
-                if(value > startingValue) {
-                    startingValueFound = true;
-                    timestampStartingValue = epoch;
-                }
+        if(startingValueFound && value >= endingValue) {
+            double diff = epoch - timestampStartingValue;
 
-                if(startingValueFound) {
-                    if(value <= endingValue) {
-                        checkGestureIsRecognized(epoch);
-                    }
-                }
+            if(diff <= maxGestureDuration) {
+                startingValueFound = false;
+                notifyGestureStarts(timestampStartingValue, epoch);
 
-                longTapDuration = epoch - timestampLongTapStart;
-                if(startingLongTapStartFound) {
-                    if (value > endingValue) {
-                        checkLongTapGestureIsRecognized(epoch);
-                    }
-                }
-                break;
-            default:
-                throw new IllegalStateException("Unexpected value: " + direction);
+                gestureStartedTimestamp = epoch;
+                startingGestureFound = true;
+            }
+        }
+
+        if(startingGestureFound && value < endingValue) {
+            notifyGestureEnds(timestampStartingValue, gestureStartedTimestamp, epoch);
+            startingGestureFound = false;
         }
     }
 
-    public void gestureRecognized(double timestampStart, double timestampEnding) {
-        RecognizedGesture rg = new RecognizedGesture(gestureName, "single tap", timestampStart, timestampEnding);
+    public void notifyGestureStarts(double timestampStart, double timestampEnding) {
         for(GestureEventListener gel : gestureEventListenerList) {
-            gel.onGesture(rg);
+            gel.onGestureStarts(timestampStart, timestampEnding);
         }
     }
 
-    public void longTapStartRecognized(double timestampStart) {
+    public void notifyGestureEnds(double timestampStart, double timestampEnding, double timestampEndingGesture) {
+        RecognizedGesture rg = new RecognizedGesture(gestureName, timestampStart, timestampEnding, timestampEndingGesture);
         for(GestureEventListener gel : gestureEventListenerList) {
-            gel.onLongTapStart(timestampStart);
-        }
-    }
-
-    public void longTapEndRecognized(double timestampStart, double timestampEnding) {
-        RecognizedGesture rg = new RecognizedGesture(gestureName, "long tap", timestampStart, timestampEnding);
-        for(GestureEventListener gel : gestureEventListenerList) {
-            gel.onLongTapEnd(rg);
+            gel.onGestureEnds(rg);
         }
     }
 
     private double returnXValue (Data data) {
-        if(sensor.equals("accelerometer")) {
-            return data.value(Acceleration.class).x();
-        } else if (sensor.equals("gyro")) {
-            return data.value(AngularVelocity.class).x();
-        } else {
-            throw new IllegalStateException("Unexpected value: " + sensor);
+        switch (sensor) {
+            case SENSOR_ACCELEROMETER:
+                return data.value(Acceleration.class).x();
+            case SENSOR_GYRO:
+                return data.value(AngularVelocity.class).x();
+            default:
+                throw new IllegalStateException("Unexpected value: " + sensor);
         }
     }
 
     private double returnYValue (Data data) {
-        if(sensor.equals("accelerometer")) {
-            return data.value(Acceleration.class).y();
-        } else if (sensor.equals("gyro")) {
-            return data.value(AngularVelocity.class).y();
-        } else {
-            throw new IllegalStateException("Unexpected value: " + sensor);
+        switch (sensor) {
+            case SENSOR_ACCELEROMETER:
+                return data.value(Acceleration.class).y();
+            case SENSOR_GYRO:
+                return data.value(AngularVelocity.class).y();
+            default:
+                throw new IllegalStateException("Unexpected value: " + sensor);
         }
     }
 
     private double returnZValue (Data data) {
-        if(sensor.equals("accelerometer")) {
-            return data.value(Acceleration.class).z();
-        } else if (sensor.equals("gyro")) {
-            return data.value(AngularVelocity.class).z();
-        } else {
-            throw new IllegalStateException("Unexpected value: " + sensor);
+        switch (sensor) {
+            case SENSOR_ACCELEROMETER:
+                return data.value(Acceleration.class).z();
+            case SENSOR_GYRO:
+                return data.value(AngularVelocity.class).z();
+            default:
+                throw new IllegalStateException("Unexpected value: " + sensor);
         }
-    }
-
-    private void checkGestureIsRecognized(double epoch) {
-        double diff = epoch - timestampStartingValue;
-
-        if(diff <= gestureDuration) {
-            startingValueFound = false;
-            gestureRecognized(timestampStartingValue, epoch);
-
-            timestampLongTapStart = epoch;
-            startingLongTapStartFound = true;
-            longTapStartRecognized(timestampLongTapStart);
-        }
-    }
-
-    private void checkLongTapGestureIsRecognized(double epoch) {
-        if(longTapDuration >= LONG_TAP_MIN_DURATION) { //riconosco un longTap se è più lungo di 1 secondo
-            longTapEndRecognized(timestampLongTapStart, epoch);
-        }
-
-        startingLongTapStartFound = false;
-        longTapDuration = 0;
     }
 }

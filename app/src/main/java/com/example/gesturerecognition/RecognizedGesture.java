@@ -6,21 +6,20 @@ import java.math.BigDecimal;
 
 public class RecognizedGesture {
     private String gestureName;
-    private String type;
-
     private double timestampStartingValue;
     private double timestampEndingValue;
-    private final double gestureDuration;
+    private final double timeFromStartingToEnding;   //in seconds
+    private final double gestureDuration;   //in seconds
 
     /*private double startingValue;
     private double endingValue;*/
 
-    public RecognizedGesture(String gestureName, String type, double timestampStartingValue, double timestampEndingValue /*, double starting_value, double ending_value*/) {
+    public RecognizedGesture(String gestureName, double timestampStartingValue, double timestampEndingValue, double timestampEndingGesture /*, double starting_value, double ending_value*/) {
         this.gestureName = gestureName;
-        this.type = type;
         this.timestampStartingValue = timestampStartingValue;
         this.timestampEndingValue = timestampEndingValue;
-        this.gestureDuration = timestampEndingValue - timestampStartingValue;
+        this.timeFromStartingToEnding = timestampEndingValue - timestampStartingValue;
+        this.gestureDuration = timestampEndingGesture - timestampEndingValue;
         /*this.starting_value = starting_value;
         this.ending_value = ending_value;*/
     }
@@ -76,11 +75,11 @@ public class RecognizedGesture {
     }
 
     public String toStringRoundedDecimal() {
-        BigDecimal start, end, duration;
-        start = round((float) timestampStartingValue,2);
-        end = round((float) timestampEndingValue,2);
-        duration = round((float) gestureDuration,2);
-        return "name: " + gestureName + ", type: " + type + ", timestamp start: " + start + "s, timestamp end: " + end + "s, gesture duration: " + duration + "s";
+        BigDecimal start = round((float) timestampStartingValue,2);
+        BigDecimal end = round((float) timestampEndingValue,2);
+        BigDecimal duration = round((float) gestureDuration,2);
+        BigDecimal time = round((float) timeFromStartingToEnding,2);
+        return "name: " + gestureName + ", timestamp start: " + start + "s, timestamp end: " + end + "s, time from start to end: " + time + ", gesture duration: " + duration + "s";
 
     }
 

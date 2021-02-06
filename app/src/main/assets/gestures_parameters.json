@@ -2,54 +2,54 @@
     "gestures": [
         {
             "name": "arm1",
-            "axis": "x",
-            "direction": "increasing",
-            "sensor": "accelerometer",
+            "axis": 0,
+            "increasing": true,
+            "sensor": 0,
             "startingValue": -1.1,
             "endingValue": 0.6,
             "gestureDuration": 3000
         }, 
         {
             "name": "arm2",
-            "axis": "x",
-            "direction": "increasing",
-            "sensor": "accelerometer",
+            "axis": 0,
+            "increasing": true,
+            "sensor": 0,
             "startingValue": -1.1,
             "endingValue": -0.1,
             "gestureDuration": 3000
         }, 
         {
             "name": "arm3",
-            "axis": "x",
-            "direction": "increasing",
-            "sensor": "gyro",
+            "axis": 0,
+            "increasing": true,
+            "sensor": 1,
             "startingValue": -1.1,
             "endingValue": 0.6,
             "gestureDuration": 3000
         }, 
         {
             "name": "leg1",
-            "axis": "y",
-            "direction": "increasing",
-            "sensor": "accelerometer",
+            "axis": 1,
+            "increasing": true,
+            "sensor": 0,
             "startingValue": -1.1,
             "endingValue": -0.7,
             "gestureDuration": 3000
         },
         {
             "name": "leg2",
-            "axis": "x",
-            "direction": "decreasing",
-            "sensor": "accelerometer",
+            "axis": 0,
+            "increasing": false,
+            "sensor": 0,
             "startingValue": 1.4,
             "endingValue": 0.6,
             "gestureDuration": 3000
         }, 
         {
             "name": "jump",
-            "axis": "x",
-            "direction": "decreasing",
-            "sensor": "accelerometer",
+            "axis": 0,
+            "increasing": false,
+            "sensor": 0,
             "startingValue": 2.0,
             "endingValue": -0.2,
             "gestureDuration": 3000

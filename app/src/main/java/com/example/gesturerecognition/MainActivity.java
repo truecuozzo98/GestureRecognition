@@ -89,7 +89,6 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
 
     double timestamp = 0;
     int gestureCounter = 0;
-    int longTapGestureCounter = 0;
 
     private AlertDialog connectDialog;
     public ArrayList<RecognizedGesture> recognizedGestureList = new ArrayList<>();
@@ -321,12 +320,9 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
 
         TextView tv = findViewById(R.id.counterGestures);
         tv.setText(String.valueOf(0));
-        tv = findViewById(R.id.counterLongTapGestures);
-        tv.setText(String.valueOf(0));
 
         timestamp = 0;
         gestureCounter = 0;
-        longTapGestureCounter = 0;
         recognizedGestureList.clear();
         accelerometerDataJSON.clear();
 
@@ -336,27 +332,16 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
         gestureRecognizer = initGestureRecognizer(text);
         gestureRecognizer.addGestureEventListener(new GestureEventListener() {
             @Override
-            public void onGesture(RecognizedGesture rg) {
-                Log.d("onGesture", "onGesture called, rg: " + rg.toStringRoundedDecimal());
+            public void onGestureStarts(double timestampStart, double timestampEnding) {
+                Log.d("onGestureStarts", "onGestureStarts, timestampStart: " + timestampStart + ", timestampEnding: " + timestampEnding);
                 gestureCounter += 1;
                 TextView tv = findViewById(R.id.counterGestures);
                 runOnUiThread(() -> tv.setText(String.valueOf(gestureCounter)));
-
-                recognizedGestureList.add(rg);
             }
 
             @Override
-            public void onLongTapStart(double timestampStart) {
-                Log.d("longTap", "inizio longTap");
-            }
-
-            @Override
-            public void onLongTapEnd(RecognizedGesture rg) {
-                Log.d("longTap", "fine longTap, rg:" + rg.toStringRoundedDecimal());
-                longTapGestureCounter += 1;
-                TextView tv = findViewById(R.id.counterLongTapGestures);
-                runOnUiThread(() -> tv.setText(String.valueOf(longTapGestureCounter)));
-
+            public void onGestureEnds(RecognizedGesture rg) {
+                Log.d("onGestureEnds", "onGestureEnds, rg:" + rg.toStringRoundedDecimal());
                 recognizedGestureList.add(rg);
             }
         });
@@ -374,14 +359,13 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
             for (int i = 0; i < jsonArray.length() ; i++) {
                 String gestureName = jsonArray.getJSONObject(i).getString("name");
                 if(text.toLowerCase().equals(gestureName.toLowerCase())) {
-                    String axis = jsonArray.getJSONObject(i).getString("axis");
-                    String direction = jsonArray.getJSONObject(i).getString("direction");
-                    String sensor = jsonArray.getJSONObject(i).getString("sensor");
+                    int axis = jsonArray.getJSONObject(i).getInt("axis");
+                    boolean increasing = jsonArray.getJSONObject(i).getBoolean("increasing");
+                    int sensor = jsonArray.getJSONObject(i).getInt("sensor");
                     double startingValue = jsonArray.getJSONObject(i).getDouble("startingValue");
                     double endingValue = jsonArray.getJSONObject(i).getDouble("endingValue");
                     double gestureDuration = jsonArray.getJSONObject(i).getDouble("gestureDuration");
-                    gr = new GestureRecognizer(gestureName, axis, direction, sensor, startingValue, endingValue, gestureDuration);
-                    Log.d("gestureParameters", "gestureName: " + gestureName + ", endingValue: " + endingValue);
+                    gr = new GestureRecognizer(gestureName, axis, increasing, sensor, startingValue, endingValue, gestureDuration);
                     break;
                 }
             }
