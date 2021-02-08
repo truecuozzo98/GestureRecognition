@@ -20,7 +20,7 @@ public class Model {
         allGestureList = new ArrayList<>();
     }
 
-    public void addGesture(JSONObject obj) {
+    public void addGestureSession(JSONObject obj) {
         allGestureList.add(obj);
     }
 

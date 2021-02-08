@@ -45,10 +45,11 @@ import com.mbientlab.metawear.android.BtleService;
 import com.mbientlab.metawear.builder.RouteBuilder;
 import com.mbientlab.metawear.builder.RouteComponent;
 import com.mbientlab.metawear.data.Acceleration;
-import com.mbientlab.metawear.data.AngularVelocity;
+import com.mbientlab.metawear.data.EulerAngles;
 import com.mbientlab.metawear.module.Accelerometer;
 import com.mbientlab.metawear.module.GyroBmi160;
 import com.mbientlab.metawear.module.Led;
+import com.mbientlab.metawear.module.SensorFusionBosch;
 
 import net.ozaydin.serkan.easy_csv.EasyCsv;
 import net.ozaydin.serkan.easy_csv.FileCallback;
@@ -80,26 +81,26 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
     private static final String PATH_DIR = "/Download/GestureRecognition/";
 
     public static BluetoothDevice bluetoothDevice;
+    private BluetoothAdapter bluetoothAdapter;
     private BtleService.LocalBinder serviceBinder;
-    //private final String MW_MAC_ADDRESS= "CD:49:78:BF:7C:89";
+    private final String MW_MAC_ADDRESS= "CD:49:78:BF:7C:89";
 
     private MetaWearBoard board;
     private Accelerometer accelerometer;
     private GyroBmi160 gyro;
-    private final ArrayList<JSONObject> accelerometerDataJSON = new ArrayList<>();
-
-    private BluetoothAdapter bluetoothAdapter;
-
-    private final GPSBroadcastReceiver gpsBroadcastReceiver = new GPSBroadcastReceiver();
-    private EasyCsv easyCsv;
-
+    private SensorFusionBosch sensorFusion;
     double timestamp = 0;
     double previousTimestamp = 0;
-    int gestureCounter = 0;
+    private final ArrayList<JSONObject> accelerometerDataJSON = new ArrayList<>();
+    public ArrayList<RecognizedGesture> recognizedGestureList = new ArrayList<>();
+    //private GestureRecognizer gestureRecognizer;
+
+    private final GPSBroadcastReceiver gpsBroadcastReceiver = new GPSBroadcastReceiver();
+
+    private EasyCsv easyCsv;
 
     private AlertDialog connectDialog;
-    public ArrayList<RecognizedGesture> recognizedGestureList = new ArrayList<>();
-    private GestureRecognizer gestureRecognizer;
+    
     private final Model model = Model.getInstance();
 
     @Override
@@ -208,6 +209,16 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
     public void onServiceConnected(ComponentName name, IBinder service) {
         Log.d("board", "onServiceConnected");
         serviceBinder = (BtleService.LocalBinder) service;
+
+        //TODO: rimuovere connessione automatica
+        final BluetoothManager btManager=
+                (BluetoothManager) getSystemService(Context.BLUETOOTH_SERVICE);
+        final BluetoothDevice remoteDevice=
+                btManager.getAdapter().getRemoteDevice(MW_MAC_ADDRESS);
+
+        // Create a MetaWear board object for the Bluetooth Device
+        board = serviceBinder.getMetaWearBoard(remoteDevice);
+        connectBoard();
     }
 
     public void retrieveBoard(String deviceName) {
@@ -326,22 +337,25 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
         TextView tv = findViewById(R.id.counterGestures);
         tv.setText(String.valueOf(0));
 
-        timestamp = 0;
-        gestureCounter = 0;
+        //double gestureCounter = 0;
         recognizedGestureList.clear();
         accelerometerDataJSON.clear();
 
         Spinner spinner = findViewById(R.id.gesture_spinner);
         String text = spinner.getSelectedItem().toString();
 
-        gestureRecognizer = initGestureRecognizer(text);
+        //GestureRecognizer gestureRecognizer;
+        GestureRecognizer gestureRecognizer = initGestureRecognizer(text);
         gestureRecognizer.addGestureEventListener(new GestureEventListener() {
             @Override
             public void onGestureStarts(double timestampStart, double timestampEnding) {
                 Log.d("onGestureStarts", "onGestureStarts, timestampStart: " + timestampStart + ", timestampEnding: " + timestampEnding);
-                gestureCounter += 1;
+                //gestureCounter += 1;
+                //textView2.setText("" + (Integer.parseInt(textView2.getText().toString()) + 1));
+
                 TextView tv = findViewById(R.id.counterGestures);
-                runOnUiThread(() -> tv.setText(String.valueOf(gestureCounter)));
+                int counter = Integer.parseInt(tv.getText().toString()) +1;
+                runOnUiThread(() -> tv.setText(String.valueOf(counter)));
             }
 
             @Override
@@ -351,18 +365,31 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
             }
         });
 
-        if(gestureRecognizer.getSensor() == GestureRecognizer.SENSOR_ACCELEROMETER) {
+        /*if(gestureRecognizer.getSensor() == GestureRecognizer.SENSOR_ACCELEROMETER) {
             getAccelerometerData();
-        } else {
-            getGyroData();
         }
 
-        //getAccelerometerData();
-        //getGyroData();
+        if(gestureRecognizer.getSensor() == GestureRecognizer.SENSOR_GYRO) {
+            getGyroData();
+        }*/
+
+        /*if(gestureRecognizer.getSensor() == GestureRecognizer.SENSOR_ACCELEROMETER) {
+            getAccelerometerData(gestureRecognizer);
+        }
+
+        if(gestureRecognizer.getSensor() == GestureRecognizer.SENSOR_GYRO) {
+            getGyroData(gestureRecognizer);
+        }*/
+
+
+
+        //getAccelerometerData(gestureRecognizer);
+        getGyroData(gestureRecognizer);
+        Toast.makeText(MainActivity.this, "Started", Toast.LENGTH_LONG).show();
     }
 
     private GestureRecognizer initGestureRecognizer(String text) {
-        GestureRecognizer gr = null;
+        //GestureRecognizer gr = null;
 
         try {
             JSONObject jsonObject = new JSONObject(loadJSONGestureParameters());
@@ -377,18 +404,19 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
                     double startingValue = jsonArray.getJSONObject(i).getDouble("startingValue");
                     double endingValue = jsonArray.getJSONObject(i).getDouble("endingValue");
                     double gestureDuration = jsonArray.getJSONObject(i).getDouble("gestureDuration");
-                    gr = new GestureRecognizer(gestureName, axis, increasing, sensor, startingValue, endingValue, gestureDuration);
-                    break;
+                    return new GestureRecognizer(gestureName, axis, increasing, sensor, startingValue, endingValue, gestureDuration);
+                    //break;
                 }
             }
         } catch (JSONException e) {
             e.printStackTrace();
         }
 
-        return gr;
+        return null;
+        //return gr;
     }
 
-    private void getAccelerometerData() {
+    private void getAccelerometerData(GestureRecognizer gestureRecognizer) {
         timestamp = 0;
         previousTimestamp = 0;
 
@@ -410,6 +438,8 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
             }
             previousTimestamp = epoch;
 
+            Log.d("Accelerometer", "acc = " + data.value(Acceleration.class));
+
             gestureRecognizer.recognizeGesture(data, timestamp);
 
             JSONObject object = new JSONObject();
@@ -429,11 +459,36 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
             accelerometer.start();
             return null;
         });
-        Toast.makeText(MainActivity.this, "Accelerometer started", Toast.LENGTH_SHORT).show();
+        //Toast.makeText(MainActivity.this, "Accelerometer started", Toast.LENGTH_SHORT).show();
     }
 
-    private void getGyroData() {
+    private void getGyroData(GestureRecognizer gestureRecognizer) {
         timestamp = 0;
+        previousTimestamp = 0;
+
+        /*sensorFusion = board.getModule(SensorFusionBosch.class);
+        sensorFusion.configure()
+                .mode(SensorFusionBosch.Mode.IMU_PLUS)
+                .accRange(SensorFusionBosch.AccRange.AR_16G)
+                .gyroRange(SensorFusionBosch.GyroRange.GR_2000DPS)
+                .commit();
+
+        sensorFusion.eulerAngles().addRouteAsync(source -> source.stream((Subscriber) (data, env) -> {
+            long epoch = data.timestamp().getTimeInMillis();
+
+            if(!(previousTimestamp == 0)) {
+                timestamp += (epoch - previousTimestamp) / 1000;
+            }
+            previousTimestamp = epoch;
+            //Log.d("Gyro", "euler = " + data.value(EulerAngles.class));
+
+            gestureRecognizer.recognizeGesture(data, timestamp);
+        })).continueWith((Continuation<Route, Void>) task -> {
+            sensorFusion.eulerAngles().start();
+            sensorFusion.start();
+            return null;
+        });*/
+
 
         gyro = board.getModule(GyroBmi160.class);
         gyro.configure()
@@ -442,32 +497,21 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
                 .commit();
         gyro.start();
 
-        gyro.angularVelocity().addRouteAsync(new RouteBuilder() {
-            @Override
-            public void configure(RouteComponent source) {
-                source.stream(new Subscriber() {
-                    @Override
-                    public void apply(Data data, Object ... env) {
-                        long epoch = data.timestamp().getTimeInMillis();
+        gyro.angularVelocity().addRouteAsync(source -> source.stream((Subscriber) (data, env) -> {
+            long epoch = data.timestamp().getTimeInMillis();
 
-                        if(!(previousTimestamp == 0)) {
-                            timestamp += (epoch - previousTimestamp) / 1000;
-                        }
-                        previousTimestamp = epoch;
-                        gestureRecognizer.recognizeGesture(data, timestamp);
-                    }
-                });
+            if(!(previousTimestamp == 0)) {
+                timestamp += (epoch - previousTimestamp) / 1000;
             }
-        }).continueWith(new Continuation<Route, Void>() {
-            @Override
-            public Void then(Task<Route> task) throws Exception {
-                gyro.angularVelocity().start();
-                gyro.start();
-                return null;
-            }
+            previousTimestamp = epoch;
+            gestureRecognizer.recognizeGesture(data, timestamp);
+        })).continueWith((Continuation<Route, Void>) task -> {
+            gyro.angularVelocity().start();
+            gyro.start();
+            return null;
         });
 
-        Toast.makeText(MainActivity.this, "Gyroscope started", Toast.LENGTH_SHORT).show();
+        //Toast.makeText(MainActivity.this, "Gyroscope started", Toast.LENGTH_SHORT).show();
     }
 
     public void stopGettingData() {
@@ -481,24 +525,40 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
             try {
                 jsonObject.put("date", currentDateTime);
                 jsonObject.put("gestureList", new ArrayList<>(recognizedGestureList));
-                model.addGesture(jsonObject);
+                model.addGestureSession(jsonObject);
             } catch (JSONException e) {
                 e.printStackTrace();
             }
         }
 
-        Log.d("TEST", "TEST1");
-        if(gestureRecognizer.getSensor() == GestureRecognizer.SENSOR_ACCELEROMETER) {
-            if(accelerometer != null){
+        if(accelerometer != null) {
+            accelerometer.stop();
+        }
+
+        if(gyro != null) {
+            gyro.stop();
+        }
+
+        /*if(sensorFusion != null) {
+            sensorFusion.stop();
+            sensorFusion = null;
+        }*/
+
+        /*if(gestureRecognizer.getSensor() == GestureRecognizer.SENSOR_ACCELEROMETER) {
+            if(accelerometer != null) {
                 accelerometer.stop();
+                Log.d("TEST", "accelerometer stopped");
             }
         } else {
             if(gyro != null) {
                 gyro.stop();
             }
-        }
-        Log.d("TEST", "TEST2");
-        Toast.makeText(MainActivity.this, "stopped", Toast.LENGTH_SHORT).show();
+
+            if(sensorFusion != null) {
+                sensorFusion.stop();
+            }
+        }*/
+        Toast.makeText(MainActivity.this, "Stopped", Toast.LENGTH_SHORT).show();
 
         if (checkSelfPermission(android.Manifest.permission.WRITE_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED) {
             //writeDataOnDevice();

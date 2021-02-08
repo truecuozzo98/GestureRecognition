@@ -69,13 +69,14 @@
                 android:id="@+id/buttonStart"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="start accelerometer" />
+                android:text="start" />
 
             <Button
                 android:id="@+id/buttonStop"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="stop accelerometer" />
+                android:layout_marginLeft="20dp"
+                android:text="stop" />
         </LinearLayout>
 
         <LinearLayout
