@@ -8,20 +8,16 @@ public class RecognizedGesture {
     private String gestureName;
     private double timestampStartingValue;
     private double timestampEndingValue;
-    private final double timeFromStartingToEnding;   //in seconds
+    private final double timeToCompleteGesture;   //in seconds
     private final double gestureDuration;   //in seconds
-
-    /*private double startingValue;
-    private double endingValue;*/
 
     public RecognizedGesture(String gestureName, double timestampStartingValue, double timestampEndingValue, double timestampEndingGesture /*, double starting_value, double ending_value*/) {
         this.gestureName = gestureName;
         this.timestampStartingValue = timestampStartingValue;
         this.timestampEndingValue = timestampEndingValue;
-        this.timeFromStartingToEnding = timestampEndingValue - timestampStartingValue;
+        //TODO: timeToCompleteGesture a volte negativo
+        this.timeToCompleteGesture = timestampEndingValue - timestampStartingValue;
         this.gestureDuration = timestampEndingGesture - timestampEndingValue;
-        /*this.starting_value = starting_value;
-        this.ending_value = ending_value;*/
     }
 
     public String getGestureName() {
@@ -52,22 +48,6 @@ public class RecognizedGesture {
         return gestureDuration;
     }
 
-    /*public double getStartingValue() {
-        return startingValue;
-    }
-
-    public void setStartingValue(double startingValue) {
-        this.startingValue = startingValue;
-    }
-
-    public double getEndingValue() {
-        return endingValue;
-    }
-
-    public void setEndingValue(double endingValue) {
-        this.endingValue = endingValue;
-    }*/
-
     @NonNull
     @Override
     public String toString() {
@@ -78,8 +58,8 @@ public class RecognizedGesture {
         BigDecimal start = round((float) timestampStartingValue,2);
         BigDecimal end = round((float) timestampEndingValue,2);
         BigDecimal duration = round((float) gestureDuration,2);
-        BigDecimal time = round((float) timeFromStartingToEnding,2);
-        return "name: " + gestureName + ", timestamp start: " + start + "s, timestamp end: " + end + "s, time from start to end: " + time + ", gesture duration: " + duration + "s";
+        BigDecimal time = round((float) timeToCompleteGesture,2);
+        return "name: " + gestureName + ", timestamp start: " + start + "s, timestamp end: " + end + "s, time to complete gesture: " + time + ", gesture duration: " + duration + "s";
 
     }
 
