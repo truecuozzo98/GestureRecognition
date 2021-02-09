@@ -465,24 +465,10 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
             gyro.stop();
         }
 
-        /*if(gestureRecognizer.getSensor() == GestureRecognizer.SENSOR_ACCELEROMETER) {
-            if(accelerometer != null) {
-                accelerometer.stop();
-                Log.d("TEST", "accelerometer stopped");
-            }
-        } else {
-            if(gyro != null) {
-                gyro.stop();
-            }
-
-            if(sensorFusion != null) {
-                sensorFusion.stop();
-            }
-        }*/
         Toast.makeText(MainActivity.this, "Stopped", Toast.LENGTH_SHORT).show();
 
         if (checkSelfPermission(android.Manifest.permission.WRITE_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED) {
-            writeDataOnDevice();
+            //writeDataOnDevice();
         } else {
             ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE}, STORAGE_REQUEST_CODE);
         }
@@ -559,6 +545,7 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
             }
 
             final String fileNameWithPath = PATH_DIR + "Gyroscope/registration_" + currentDateTime;
+            //TODO: risolver errore ConcurrentModificationException
             easyCsv.createCsvFile(fileNameWithPath, headerList, gyroscopeDataString, STORAGE_REQUEST_CODE, new FileCallback() {
                 @Override
                 public void onSuccess(File file) {

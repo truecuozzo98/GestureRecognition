@@ -68,7 +68,7 @@ public class GestureRecognizer {
 
     public void recognizeGesture(Data data) {
         getFormattedTimestamp(data.timestamp().getTimeInMillis());
-        Log.d("timestamp", "timestamp: " + currentTime + ", previous time: " + previousTimestamp);
+        //Log.d("timestamp", "timestamp: " + currentTime + ", previous time: " + previousTimestamp);
 
         double value;
         switch (axis) {
@@ -84,6 +84,8 @@ public class GestureRecognizer {
             default:
                 throw new IllegalStateException("Unexpected value: " + axis);
         }
+
+        Log.d("value", "value: " + value);
 
         if(!increasing){
             value = -1 * value;
@@ -162,7 +164,7 @@ public class GestureRecognizer {
         return sensor;
     }
 
-    public double fromGyroToAngle(double sample) {
+    private double fromGyroToAngle(double sample) {
         //Calculate the time elapsed since the last sample by differencing the time samples
         double deltaTime = currentTime - previousTimeGyro;
 

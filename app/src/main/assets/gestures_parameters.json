@@ -31,7 +31,7 @@
             "name": "leg1",
             "axis": 1,
             "increasing": true,
-            "sensor": 0,
+            "sensor": 1,
             "startingValue": -1.1,
             "endingValue": -0.7,
             "gestureDuration": 3000
@@ -40,7 +40,7 @@
             "name": "leg2",
             "axis": 0,
             "increasing": false,
-            "sensor": 0,
+            "sensor": 1,
             "startingValue": 1.6,
             "endingValue": 0.5,
             "gestureDuration": 3000
@@ -50,8 +50,8 @@
             "axis": 0,
             "increasing": false,
             "sensor": 0,
-            "startingValue": 2.0,
-            "endingValue": -0.2,
+            "startingValue": 1.8,
+            "endingValue": 0,
             "gestureDuration": 3000
         }
     ]
