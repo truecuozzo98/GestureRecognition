@@ -39,7 +39,7 @@ public class GestureRecognizer {
 
     ArrayList<GestureEventListener> gestureEventListenerList;
     private double previousTimestamp;
-    private double timestamp;
+    private double currentTime;
 
     public GestureRecognizer(String gestureName, int axis, boolean increasing, int sensor, double startingValue, double endingValue, double maxGestureDuration) {
         this.gestureName = gestureName;
@@ -56,11 +56,10 @@ public class GestureRecognizer {
 
         this.maxGestureDuration = maxGestureDuration;
         this.gestureEventListenerList = new ArrayList<>();
-
         currentAngle = 0;
         previousTimeGyro = 0;
         previousTimestamp = 0;
-        timestamp = 0;
+        currentTime = 0;
     }
 
     public void addGestureEventListener(GestureEventListener gestureEventListener) {
@@ -69,18 +68,18 @@ public class GestureRecognizer {
 
     public void recognizeGesture(Data data) {
         getFormattedTimestamp(data.timestamp().getTimeInMillis());
-        Log.d("timestamp", "timestamp: " + timestamp + ", previous time: " + previousTimestamp);
+        Log.d("timestamp", "timestamp: " + currentTime + ", previous time: " + previousTimestamp);
 
         double value;
         switch (axis) {
             case AXIS_X:
-                value = returnXValue(data, timestamp);
+                value = returnXValue(data);
                 break;
             case AXIS_Y:
-                value = returnYValue(data, timestamp);
+                value = returnYValue(data);
                 break;
             case AXIS_Z:
-                value = returnZValue(data, timestamp);
+                value = returnZValue(data);
                 break;
             default:
                 throw new IllegalStateException("Unexpected value: " + axis);
@@ -92,23 +91,23 @@ public class GestureRecognizer {
 
         if(value < startingValue) {
             startingValueFound = true;
-            timestampStartingValue = timestamp;
+            timestampStartingValue = currentTime;
         }
 
         if(startingValueFound && value >= endingValue) {
-            double diff = timestamp - timestampStartingValue;
+            double diff = currentTime - timestampStartingValue;
 
             if(diff <= maxGestureDuration) {
                 startingValueFound = false;
-                notifyGestureStarts(timestampStartingValue, timestamp);
+                notifyGestureStarts(timestampStartingValue, currentTime);
 
-                gestureStartedTimestamp = timestamp;
+                gestureStartedTimestamp = currentTime;
                 startingGestureFound = true;
             }
         }
 
         if(startingGestureFound && value < endingValue) {
-            notifyGestureEnds(timestampStartingValue, gestureStartedTimestamp, timestamp);
+            notifyGestureEnds(timestampStartingValue, gestureStartedTimestamp, currentTime);
             startingGestureFound = false;
         }
     }
@@ -126,34 +125,34 @@ public class GestureRecognizer {
         }
     }
 
-    private double returnXValue (Data data, double timestamp) {
+    private double returnXValue(Data data) {
         switch (sensor) {
             case SENSOR_ACCELEROMETER:
                 return data.value(Acceleration.class).x();
             case SENSOR_GYRO:
-                return fromGyroToAngle(data.value(AngularVelocity.class).x(), timestamp);
+                return fromGyroToAngle(data.value(AngularVelocity.class).x());
             default:
                 throw new IllegalStateException("Unexpected value: " + sensor);
         }
     }
 
-    private double returnYValue (Data data, double timestamp) {
+    private double returnYValue(Data data) {
         switch (sensor) {
             case SENSOR_ACCELEROMETER:
                 return data.value(Acceleration.class).y();
             case SENSOR_GYRO:
-                return fromGyroToAngle(data.value(AngularVelocity.class).y(), timestamp);
+                return fromGyroToAngle(data.value(AngularVelocity.class).y());
             default:
                 throw new IllegalStateException("Unexpected value: " + sensor);
         }
     }
 
-    private double returnZValue(Data data, double timestamp) {
+    private double returnZValue(Data data) {
         switch (sensor) {
             case SENSOR_ACCELEROMETER:
                 return data.value(Acceleration.class).z();
             case SENSOR_GYRO:
-                return fromGyroToAngle(data.value(AngularVelocity.class).z(), timestamp);
+                return fromGyroToAngle(data.value(AngularVelocity.class).z());
             default:
                 throw new IllegalStateException("Unexpected value: " + sensor);
         }
@@ -163,7 +162,7 @@ public class GestureRecognizer {
         return sensor;
     }
 
-    public double fromGyroToAngle(double sample, double currentTime) {
+    public double fromGyroToAngle(double sample) {
         //Calculate the time elapsed since the last sample by differencing the time samples
         double deltaTime = currentTime - previousTimeGyro;
 
@@ -181,9 +180,9 @@ public class GestureRecognizer {
 
     public double getFormattedTimestamp(double epoch) {
         if(!(previousTimestamp == 0)) {
-            timestamp += (epoch - previousTimestamp) / 1000;
+            currentTime += (epoch - previousTimestamp) / 1000;
         }
         previousTimestamp = epoch;
-        return timestamp;
+        return currentTime;
     }
 }

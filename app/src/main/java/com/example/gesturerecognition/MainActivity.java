@@ -36,21 +36,16 @@ import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentManager;
 import androidx.fragment.app.FragmentTransaction;
 
-import com.mbientlab.metawear.Data;
 import com.mbientlab.metawear.DeviceInformation;
 import com.mbientlab.metawear.MetaWearBoard;
 import com.mbientlab.metawear.Route;
 import com.mbientlab.metawear.Subscriber;
 import com.mbientlab.metawear.android.BtleService;
-import com.mbientlab.metawear.builder.RouteBuilder;
-import com.mbientlab.metawear.builder.RouteComponent;
 import com.mbientlab.metawear.data.Acceleration;
 import com.mbientlab.metawear.data.AngularVelocity;
-import com.mbientlab.metawear.data.EulerAngles;
 import com.mbientlab.metawear.module.Accelerometer;
 import com.mbientlab.metawear.module.GyroBmi160;
 import com.mbientlab.metawear.module.Led;
-import com.mbientlab.metawear.module.SensorFusionBosch;
 
 import net.ozaydin.serkan.easy_csv.EasyCsv;
 import net.ozaydin.serkan.easy_csv.FileCallback;
@@ -70,7 +65,6 @@ import java.util.List;
 import java.util.Locale;
 
 import bolts.Continuation;
-import bolts.Task;
 
 public class MainActivity extends AppCompatActivity implements ServiceConnection, AdapterView.OnItemSelectedListener, BleDeviceViewHolder.AdapterCallback {
     private static final int REQUEST_ENABLE_BT = 1;
@@ -89,10 +83,7 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
     private MetaWearBoard board;
     private Accelerometer accelerometer;
     private GyroBmi160 gyro;
-    /*double timestamp = 0;
-    double previousTimestamp = 0;
-    private final ArrayList<JSONObject> accelerometerDataJSON = new ArrayList<>();
-    private final ArrayList<JSONObject> gyroscopeDataJSON = new ArrayList<>();*/
+
     private final List<String> accelerometerDataString = new ArrayList<>();
     private final List<String> gyroscopeDataString = new ArrayList<>();
     public ArrayList<RecognizedGesture> recognizedGestureList = new ArrayList<>();
@@ -341,8 +332,6 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
         tv.setText(String.valueOf(0));
 
         recognizedGestureList.clear();
-        /*accelerometerDataJSON.clear();
-        gyroscopeDataJSON.clear();*/
         accelerometerDataString.clear();
         gyroscopeDataString.clear();
 
@@ -375,8 +364,6 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
             getGyroData();
         }
 
-        /*getAccelerometerData(gestureRecognizer);
-        getGyroData(gestureRecognizer);*/
         Toast.makeText(MainActivity.this, "Started", Toast.LENGTH_SHORT).show();
     }
 
@@ -495,8 +482,7 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
         Toast.makeText(MainActivity.this, "Stopped", Toast.LENGTH_SHORT).show();
 
         if (checkSelfPermission(android.Manifest.permission.WRITE_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED) {
-            //TODO: implementare writeDataOnDevice in GestureRecognizer
-            //writeDataOnDevice();
+            writeDataOnDevice();
         } else {
             ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE}, STORAGE_REQUEST_CODE);
         }
@@ -550,7 +536,6 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
             }
 
             final String fileNameWithPath = PATH_DIR + "Accelerometer/registration_" + currentDateTime;
-            //List<String> list = fromJsonToStringCSV(accelerometerDataJSON);
             easyCsv.createCsvFile(fileNameWithPath, headerList, accelerometerDataString, STORAGE_REQUEST_CODE, new FileCallback() {
                 @Override
                 public void onSuccess(File file) {
@@ -566,6 +551,7 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
             });
         }
 
+        //Scrittura dati giroscopio
         if(!gyroscopeDataString.isEmpty()) {
             File gyroDir = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS + File.separator + "GestureRecognition"), "Gyroscope");
             if(!gyroDir.exists()) {
@@ -573,7 +559,6 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
             }
 
             final String fileNameWithPath = PATH_DIR + "Gyroscope/registration_" + currentDateTime;
-            //List<String> list = fromJsonToStringCSV(gyroscopeDataJSON);
             easyCsv.createCsvFile(fileNameWithPath, headerList, gyroscopeDataString, STORAGE_REQUEST_CODE, new FileCallback() {
                 @Override
                 public void onSuccess(File file) {
@@ -590,19 +575,6 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
         }
 
     }
-
-    /*public List<String> fromJsonToStringCSV (ArrayList<JSONObject> jsonArray) {
-        List<String> stringList = new ArrayList<>();
-        for (JSONObject x : jsonArray) {
-            stringList.add("a");
-            try {
-                stringList.add(x.get("timestamp") + "," + x.get("x") + "," + x.get("y") + "," + x.get("z") + ";");
-            } catch (JSONException e) {
-                e.printStackTrace();
-            }
-        }
-        return stringList;
-    }*/
 
     @Override
     public void onDestroy() {
