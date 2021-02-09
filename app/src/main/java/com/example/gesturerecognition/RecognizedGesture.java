@@ -15,7 +15,6 @@ public class RecognizedGesture {
         this.gestureName = gestureName;
         this.timestampStartingValue = timestampStartingValue;
         this.timestampEndingValue = timestampEndingValue;
-        //TODO: timeToCompleteGesture a volte negativo
         this.timeToCompleteGesture = timestampEndingValue - timestampStartingValue;
         this.gestureDuration = timestampEndingGesture - timestampEndingValue;
     }

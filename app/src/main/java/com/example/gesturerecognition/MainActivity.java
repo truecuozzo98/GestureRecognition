@@ -89,9 +89,9 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
     private MetaWearBoard board;
     private Accelerometer accelerometer;
     private GyroBmi160 gyro;
-    double timestamp = 0;
+    /*double timestamp = 0;
     double previousTimestamp = 0;
-    /*private final ArrayList<JSONObject> accelerometerDataJSON = new ArrayList<>();
+    private final ArrayList<JSONObject> accelerometerDataJSON = new ArrayList<>();
     private final ArrayList<JSONObject> gyroscopeDataJSON = new ArrayList<>();*/
     private final List<String> accelerometerDataString = new ArrayList<>();
     private final List<String> gyroscopeDataString = new ArrayList<>();
@@ -405,9 +405,6 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
     }
 
     private void getAccelerometerData() {
-        timestamp = 0;
-        previousTimestamp = 0;
-
         accelerometer = board.getModule(Accelerometer.class);
         accelerometer.configure()
                 .odr(5f)
@@ -416,33 +413,15 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
         accelerometer.start();
 
         accelerometer.acceleration().addRouteAsync(source -> source.stream((Subscriber) (data, env) -> {
+            gestureRecognizer.recognizeGesture(data);
+
             long epoch = data.timestamp().getTimeInMillis();
+            double timestamp = gestureRecognizer.getFormattedTimestamp(epoch);
             float x = data.value(Acceleration.class).x();
             float y = data.value(Acceleration.class).y();
             float z = data.value(Acceleration.class).z();
 
-            if(!(previousTimestamp == 0)) {
-                timestamp += (epoch - previousTimestamp) / 1000;
-            }
-            previousTimestamp = epoch;
-
-            gestureRecognizer.recognizeGesture(data, timestamp);
-
-            /*JSONObject object = new JSONObject();
-            try {
-                object.put("epoch", epoch);
-                object.put("timestamp", timestamp);
-                object.put("x", x);
-                object.put("y", y);
-                object.put("z", z);
-            } catch (JSONException e) {
-                e.printStackTrace();
-            }
-
-            accelerometerDataJSON.add(object);*/
-
             accelerometerDataString.add(epoch + "," + timestamp + "," + x + "," + y + "," + z + ";");
-
         })).continueWith((Continuation<Route, Void>) task -> {
             accelerometer.acceleration().start();
             accelerometer.start();
@@ -451,10 +430,6 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
     }
 
     private void getGyroData() {
-        //TODO: Eliminare variabili timestamp e formattare il tempo alla fine (nel recognizer?)
-        timestamp = 0;
-        previousTimestamp = 0;
-
         gyro = board.getModule(GyroBmi160.class);
         gyro.configure()
                 .odr(GyroBmi160.OutputDataRate.ODR_25_HZ)
@@ -463,32 +438,14 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
         gyro.start();
 
         gyro.angularVelocity().addRouteAsync(source -> source.stream((Subscriber) (data, env) -> {
+            gestureRecognizer.recognizeGesture(data);
+
             long epoch = data.timestamp().getTimeInMillis();
+            double timestamp = gestureRecognizer.getFormattedTimestamp(epoch);
             float x = data.value(AngularVelocity.class).x();
             float y = data.value(AngularVelocity.class).y();
             float z = data.value(AngularVelocity.class).z();
-
-            if(!(previousTimestamp == 0)) {
-                timestamp += (epoch - previousTimestamp) / 1000;
-            }
-            previousTimestamp = epoch;
-            gestureRecognizer.recognizeGesture(data, timestamp);
-
-            /*JSONObject object = new JSONObject();
-            try {
-                object.put("epoch", epoch);
-                object.put("timestamp", timestamp);
-                object.put("x", x);
-                object.put("y", y);
-                object.put("z", z);
-            } catch (JSONException e) {
-                e.printStackTrace();
-            }
-
-            gyroscopeDataJSON.add(object);*/
-
             gyroscopeDataString.add(epoch + "," + timestamp + "," + x + "," + y + "," + z + ";");
-
         })).continueWith((Continuation<Route, Void>) task -> {
             gyro.angularVelocity().start();
             gyro.start();
@@ -538,7 +495,8 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
         Toast.makeText(MainActivity.this, "Stopped", Toast.LENGTH_SHORT).show();
 
         if (checkSelfPermission(android.Manifest.permission.WRITE_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED) {
-            writeDataOnDevice();
+            //TODO: implementare writeDataOnDevice in GestureRecognizer
+            //writeDataOnDevice();
         } else {
             ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE}, STORAGE_REQUEST_CODE);
         }
@@ -580,8 +538,6 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
     public void writeDataOnDevice() {
         List<String> headerList = new ArrayList<>();
         headerList.add("Timestamp,x-axis,y-axis,z-axis;");
-
-
 
         SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd_HH-mm-ss", Locale.getDefault());
         final String currentDateTime = sdf.format(new Date());
@@ -635,18 +591,18 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
 
     }
 
-    public List<String> fromJsonToStringCSV (ArrayList<JSONObject> jsonArray) {
+    /*public List<String> fromJsonToStringCSV (ArrayList<JSONObject> jsonArray) {
         List<String> stringList = new ArrayList<>();
         for (JSONObject x : jsonArray) {
             stringList.add("a");
-            /*try {
+            try {
                 stringList.add(x.get("timestamp") + "," + x.get("x") + "," + x.get("y") + "," + x.get("z") + ";");
             } catch (JSONException e) {
                 e.printStackTrace();
-            }*/
+            }
         }
         return stringList;
-    }
+    }*/
 
     @Override
     public void onDestroy() {

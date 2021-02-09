@@ -43,7 +43,6 @@ public class BleDeviceListFragment extends Fragment {
 
     private boolean scanning = false;
     private final Handler handler = new Handler();
-    //TODO: rivedere static
     public static ArrayList<BluetoothDevice> devices = new ArrayList<>();
     BluetoothLeScannerCompat bluetoothLeScanner;
     ScanSettings scanSettings;

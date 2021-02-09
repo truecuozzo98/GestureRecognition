@@ -1,12 +1,10 @@
 package com.example.gesturerecognition;
 
-import android.telephony.AccessNetworkConstants;
 import android.util.Log;
 
 import com.mbientlab.metawear.Data;
 import com.mbientlab.metawear.data.Acceleration;
 import com.mbientlab.metawear.data.AngularVelocity;
-import com.mbientlab.metawear.data.EulerAngles;
 
 import java.util.ArrayList;
 
@@ -37,9 +35,11 @@ public class GestureRecognizer {
     private boolean startingGestureFound;
 
     private double currentAngle;
-    private double previousTime;
+    private double previousTimeGyro;
 
     ArrayList<GestureEventListener> gestureEventListenerList;
+    private double previousTimestamp;
+    private double timestamp;
 
     public GestureRecognizer(String gestureName, int axis, boolean increasing, int sensor, double startingValue, double endingValue, double maxGestureDuration) {
         this.gestureName = gestureName;
@@ -58,24 +58,29 @@ public class GestureRecognizer {
         this.gestureEventListenerList = new ArrayList<>();
 
         currentAngle = 0;
-        previousTime = 0;
+        previousTimeGyro = 0;
+        previousTimestamp = 0;
+        timestamp = 0;
     }
 
     public void addGestureEventListener(GestureEventListener gestureEventListener) {
         this.gestureEventListenerList.add(gestureEventListener);
     }
 
-    public void recognizeGesture(Data data, double epoch) {
+    public void recognizeGesture(Data data) {
+        getFormattedTimestamp(data.timestamp().getTimeInMillis());
+        Log.d("timestamp", "timestamp: " + timestamp + ", previous time: " + previousTimestamp);
+
         double value;
         switch (axis) {
             case AXIS_X:
-                value = returnXValue(data, epoch);
+                value = returnXValue(data, timestamp);
                 break;
             case AXIS_Y:
-                value = returnYValue(data, epoch);
+                value = returnYValue(data, timestamp);
                 break;
             case AXIS_Z:
-                value = returnZValue(data, epoch);
+                value = returnZValue(data, timestamp);
                 break;
             default:
                 throw new IllegalStateException("Unexpected value: " + axis);
@@ -87,23 +92,23 @@ public class GestureRecognizer {
 
         if(value < startingValue) {
             startingValueFound = true;
-            timestampStartingValue = epoch;
+            timestampStartingValue = timestamp;
         }
 
         if(startingValueFound && value >= endingValue) {
-            double diff = epoch - timestampStartingValue;
+            double diff = timestamp - timestampStartingValue;
 
             if(diff <= maxGestureDuration) {
                 startingValueFound = false;
-                notifyGestureStarts(timestampStartingValue, epoch);
+                notifyGestureStarts(timestampStartingValue, timestamp);
 
-                gestureStartedTimestamp = epoch;
+                gestureStartedTimestamp = timestamp;
                 startingGestureFound = true;
             }
         }
 
         if(startingGestureFound && value < endingValue) {
-            notifyGestureEnds(timestampStartingValue, gestureStartedTimestamp, epoch);
+            notifyGestureEnds(timestampStartingValue, gestureStartedTimestamp, timestamp);
             startingGestureFound = false;
         }
     }
@@ -121,34 +126,34 @@ public class GestureRecognizer {
         }
     }
 
-    private double returnXValue (Data data, double epoch) {
+    private double returnXValue (Data data, double timestamp) {
         switch (sensor) {
             case SENSOR_ACCELEROMETER:
                 return data.value(Acceleration.class).x();
             case SENSOR_GYRO:
-                return fromGyroToAngle(data.value(AngularVelocity.class).x(), epoch);
+                return fromGyroToAngle(data.value(AngularVelocity.class).x(), timestamp);
             default:
                 throw new IllegalStateException("Unexpected value: " + sensor);
         }
     }
 
-    private double returnYValue (Data data, double epoch) {
+    private double returnYValue (Data data, double timestamp) {
         switch (sensor) {
             case SENSOR_ACCELEROMETER:
                 return data.value(Acceleration.class).y();
             case SENSOR_GYRO:
-                return fromGyroToAngle(data.value(AngularVelocity.class).y(), epoch);
+                return fromGyroToAngle(data.value(AngularVelocity.class).y(), timestamp);
             default:
                 throw new IllegalStateException("Unexpected value: " + sensor);
         }
     }
 
-    private double returnZValue(Data data, double epoch) {
+    private double returnZValue(Data data, double timestamp) {
         switch (sensor) {
             case SENSOR_ACCELEROMETER:
                 return data.value(Acceleration.class).z();
             case SENSOR_GYRO:
-                return fromGyroToAngle(data.value(AngularVelocity.class).z(), epoch);
+                return fromGyroToAngle(data.value(AngularVelocity.class).z(), timestamp);
             default:
                 throw new IllegalStateException("Unexpected value: " + sensor);
         }
@@ -160,7 +165,7 @@ public class GestureRecognizer {
 
     public double fromGyroToAngle(double sample, double currentTime) {
         //Calculate the time elapsed since the last sample by differencing the time samples
-        double deltaTime = currentTime - previousTime;
+        double deltaTime = currentTime - previousTimeGyro;
 
         //Multiply the sample and the time difference - this is your change in angle since the last sample
         double deltaAngle = sample * deltaTime;
@@ -169,8 +174,16 @@ public class GestureRecognizer {
         currentAngle += deltaAngle;
 
         //Save the current time as previous time
-        previousTime = currentTime;
+        previousTimeGyro = currentTime;
 
         return currentAngle;
+    }
+
+    public double getFormattedTimestamp(double epoch) {
+        if(!(previousTimestamp == 0)) {
+            timestamp += (epoch - previousTimestamp) / 1000;
+        }
+        previousTimestamp = epoch;
+        return timestamp;
     }
 }
