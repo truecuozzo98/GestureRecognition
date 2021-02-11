@@ -13,11 +13,13 @@ import android.content.IntentFilter;
 import android.content.ServiceConnection;
 import android.content.pm.PackageManager;
 import android.graphics.drawable.ColorDrawable;
+import android.hardware.SensorDirectChannel;
 import android.location.LocationManager;
 import android.os.Bundle;
 import android.os.Environment;
 import android.os.IBinder;
 import android.util.Log;
+import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.AdapterView;
@@ -46,6 +48,7 @@ import com.mbientlab.metawear.data.AngularVelocity;
 import com.mbientlab.metawear.module.Accelerometer;
 import com.mbientlab.metawear.module.GyroBmi160;
 import com.mbientlab.metawear.module.Led;
+import com.mbientlab.metawear.module.SensorFusionBosch;
 
 import net.ozaydin.serkan.easy_csv.EasyCsv;
 import net.ozaydin.serkan.easy_csv.FileCallback;
@@ -96,6 +99,7 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
     
     private final Model model = Model.getInstance();
     private GestureRecognizer gestureRecognizer;
+    private SensorFusionBosch sensorFusion;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -357,7 +361,8 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
         });
 
         if(gestureRecognizer.getSensor() == GestureRecognizer.SENSOR_ACCELEROMETER) {
-            getAccelerometerData();
+            //getAccelerometerData();
+            getGravityData();
         }
 
         if(gestureRecognizer.getSensor() == GestureRecognizer.SENSOR_GYRO) {
@@ -404,14 +409,39 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
 
             long epoch = data.timestamp().getTimeInMillis();
             double timestamp = gestureRecognizer.getFormattedTimestamp(epoch);
-            float x = data.value(Acceleration.class).x();
-            float y = data.value(Acceleration.class).y();
-            float z = data.value(Acceleration.class).z();
+            double x = data.value(Acceleration.class).x();
+            double y = data.value(Acceleration.class).y();
+            double z = data.value(Acceleration.class).z();
 
             accelerometerDataString.add(epoch + "," + timestamp + "," + x + "," + y + "," + z + ";");
         })).continueWith((Continuation<Route, Void>) task -> {
             accelerometer.acceleration().start();
             accelerometer.start();
+            return null;
+        });
+    }
+
+    private void getGravityData() {
+        sensorFusion = board.getModule(SensorFusionBosch.class);
+        sensorFusion.configure()
+                .mode(SensorFusionBosch.Mode.NDOF)
+                .accRange(SensorFusionBosch.AccRange.AR_16G)
+                .gyroRange(SensorFusionBosch.GyroRange.GR_2000DPS)
+                .commit();
+        sensorFusion.start();
+
+        sensorFusion.gravity().addRouteAsync(source -> source.stream((Subscriber) (data, env) -> {
+            gestureRecognizer.recognizeGesture(data);
+
+            long epoch = data.timestamp().getTimeInMillis();
+            double timestamp = gestureRecognizer.getFormattedTimestamp(epoch);
+            double x = data.value(Acceleration.class).x();
+            double y = data.value(Acceleration.class).y();
+            double z = data.value(Acceleration.class).z();
+            accelerometerDataString.add(epoch + "," + timestamp + "," + x + "," + y + "," + z + ";");
+        })).continueWith((Continuation<Route, Void>) task -> {
+            sensorFusion.gravity().start();
+            sensorFusion.start();
             return null;
         });
     }
@@ -429,9 +459,9 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
 
             long epoch = data.timestamp().getTimeInMillis();
             double timestamp = gestureRecognizer.getFormattedTimestamp(epoch);
-            float x = data.value(AngularVelocity.class).x();
-            float y = data.value(AngularVelocity.class).y();
-            float z = data.value(AngularVelocity.class).z();
+            double x = data.value(AngularVelocity.class).x();
+            double y = data.value(AngularVelocity.class).y();
+            double z = data.value(AngularVelocity.class).z();
             gyroscopeDataString.add(epoch + "," + timestamp + "," + x + "," + y + "," + z + ";");
         })).continueWith((Continuation<Route, Void>) task -> {
             gyro.angularVelocity().start();
@@ -465,10 +495,14 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
             gyro.stop();
         }
 
+        if(sensorFusion != null) {
+            sensorFusion.stop();
+        }
+
         Toast.makeText(MainActivity.this, "Stopped", Toast.LENGTH_SHORT).show();
 
         if (checkSelfPermission(android.Manifest.permission.WRITE_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED) {
-            //writeDataOnDevice();
+            writeDataOnDevice();
         } else {
             ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE}, STORAGE_REQUEST_CODE);
         }
@@ -509,7 +543,7 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
 
     public void writeDataOnDevice() {
         List<String> headerList = new ArrayList<>();
-        headerList.add("Timestamp,x-axis,y-axis,z-axis;");
+        headerList.add("Epoch,Timestamp,x-axis,y-axis,z-axis;");
 
         SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd_HH-mm-ss", Locale.getDefault());
         final String currentDateTime = sdf.format(new Date());
@@ -522,7 +556,8 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
             }
 
             final String fileNameWithPath = PATH_DIR + "Accelerometer/registration_" + currentDateTime;
-            easyCsv.createCsvFile(fileNameWithPath, headerList, accelerometerDataString, STORAGE_REQUEST_CODE, new FileCallback() {
+            List<String> list = new ArrayList<>(accelerometerDataString);
+            easyCsv.createCsvFile(fileNameWithPath, headerList, list, STORAGE_REQUEST_CODE, new FileCallback() {
                 @Override
                 public void onSuccess(File file) {
                     Log.d("EasyCsv", "Accelerometro file salvato: " + file.getName());
@@ -545,8 +580,8 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
             }
 
             final String fileNameWithPath = PATH_DIR + "Gyroscope/registration_" + currentDateTime;
-            //TODO: risolver errore ConcurrentModificationException
-            easyCsv.createCsvFile(fileNameWithPath, headerList, gyroscopeDataString, STORAGE_REQUEST_CODE, new FileCallback() {
+            List<String> list = new ArrayList<>(accelerometerDataString);
+            easyCsv.createCsvFile(fileNameWithPath, headerList, list, STORAGE_REQUEST_CODE, new FileCallback() {
                 @Override
                 public void onSuccess(File file) {
                     Log.d("EasyCsv", "Giroscopio file salvato: " + file.getName());

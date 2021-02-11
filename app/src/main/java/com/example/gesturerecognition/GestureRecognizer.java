@@ -57,9 +57,9 @@ public class GestureRecognizer {
         this.maxGestureDuration = maxGestureDuration;
         this.gestureEventListenerList = new ArrayList<>();
         currentAngle = 0;
-        previousTimeGyro = 0;
-        previousTimestamp = 0;
         currentTime = 0;
+        previousTimestamp = 0;
+        previousTimeGyro = 0;
     }
 
     public void addGestureEventListener(GestureEventListener gestureEventListener) {
