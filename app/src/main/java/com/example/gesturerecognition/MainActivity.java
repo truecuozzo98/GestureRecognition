@@ -100,6 +100,8 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
     private GestureRecognizer gestureRecognizer;
     private SensorFusionBosch sensorFusion;
 
+    TextView tvGestureStatus;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -119,8 +121,8 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
         Button disconnect = findViewById(R.id.disconnectButton);
         disconnect.setOnClickListener(v -> disconnectBoard());
 
-        Button led = findViewById(R.id.buttonLed);
-        led.setOnClickListener(v -> blinkLed());
+        /*Button led = findViewById(R.id.buttonLed);
+        led.setOnClickListener(v -> blinkLed());*/
 
         Button start = findViewById(R.id.buttonStart);
         start.setOnClickListener(v -> startGettingData());
@@ -130,6 +132,8 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
 
         Button gestureListButton = findViewById(R.id.gestureListButton);
         gestureListButton.setOnClickListener(v -> goToFragment("gestureListFragment"));
+
+        tvGestureStatus = findViewById(R.id.gestureStatus);
 
         final BluetoothManager bluetoothManager = (BluetoothManager) getSystemService(Context.BLUETOOTH_SERVICE);
         bluetoothAdapter = bluetoothManager.getAdapter();
@@ -349,15 +353,20 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
             @Override
             public void onGestureStarts(double timestampStart, double timestampEnding) {
                 Log.d("onGestureStarts", "onGestureStarts, timestampStart: " + timestampStart + ", timestampEnding: " + timestampEnding);
-                TextView tv = findViewById(R.id.counterGestures);
-                int counter = Integer.parseInt(tv.getText().toString()) +1;
+                TextView tv1 = findViewById(R.id.counterGestures);
+                int counter = Integer.parseInt(tv1.getText().toString()) +1;
                 runOnUiThread(() -> tv.setText(String.valueOf(counter)));
+
+                runOnUiThread(() -> tvGestureStatus.setText("gesture started"));
             }
 
             @Override
             public void onGestureEnds(RecognizedGesture rg) {
                 Log.d("onGestureEnds", "onGestureEnds, rg:" + rg.toStringRoundedDecimal());
                 recognizedGestureList.add(rg);
+
+                final String text = "gesture ended, it lasted: " + rg.getFormattedGestureDuration() + " seconds";
+                runOnUiThread(() -> tvGestureStatus.setText(text));
             }
         });
 
@@ -488,6 +497,8 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
     public void stopGettingData() {
         if(board == null) { return; }
 
+        tvGestureStatus.setText("");
+
         if(!recognizedGestureList.isEmpty()) {
             SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd_HH-mm-ss", Locale.getDefault());
             final String currentDateTime = sdf.format(new Date());
@@ -517,7 +528,7 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
         Toast.makeText(MainActivity.this, "Stopped", Toast.LENGTH_SHORT).show();
 
         if (checkSelfPermission(android.Manifest.permission.WRITE_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED) {
-            writeDataOnDevice();
+            //writeDataOnDevice();
         } else {
             ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE}, STORAGE_REQUEST_CODE);
         }

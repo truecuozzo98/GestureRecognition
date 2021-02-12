@@ -47,6 +47,10 @@ public class RecognizedGesture {
         return gestureDuration;
     }
 
+    public BigDecimal getFormattedGestureDuration() {
+        return round((float) gestureDuration,2);
+    }
+
     @NonNull
     @Override
     public String toString() {
