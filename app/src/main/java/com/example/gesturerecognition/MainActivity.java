@@ -13,13 +13,11 @@ import android.content.IntentFilter;
 import android.content.ServiceConnection;
 import android.content.pm.PackageManager;
 import android.graphics.drawable.ColorDrawable;
-import android.hardware.SensorDirectChannel;
 import android.location.LocationManager;
 import android.os.Bundle;
 import android.os.Environment;
 import android.os.IBinder;
 import android.util.Log;
-import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.AdapterView;
@@ -87,8 +85,9 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
     private Accelerometer accelerometer;
     private GyroBmi160 gyro;
 
-    private final List<String> accelerometerDataString = new ArrayList<>();
-    private final List<String> gyroscopeDataString = new ArrayList<>();
+    /*private final List<String> accelerometerDataString = new ArrayList<>();
+    private final List<String> gyroscopeDataString = new ArrayList<>();*/
+    private final List<String> dataListString = new ArrayList<>();
     public ArrayList<RecognizedGesture> recognizedGestureList = new ArrayList<>();
 
     private final GPSBroadcastReceiver gpsBroadcastReceiver = new GPSBroadcastReceiver();
@@ -336,8 +335,10 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
         tv.setText(String.valueOf(0));
 
         recognizedGestureList.clear();
-        accelerometerDataString.clear();
-        gyroscopeDataString.clear();
+        /*accelerometerDataString.clear();
+        gyroscopeDataString.clear();*/
+
+        dataListString.clear();
 
         Spinner spinner = findViewById(R.id.gesture_spinner);
         String text = spinner.getSelectedItem().toString();
@@ -361,7 +362,10 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
         });
 
         if(gestureRecognizer.getSensor() == GestureRecognizer.SENSOR_ACCELEROMETER) {
-            //getAccelerometerData();
+            getAccelerometerData();
+        }
+
+        if(gestureRecognizer.getSensor() == GestureRecognizer.SENSOR_GRAVITY) {
             getGravityData();
         }
 
@@ -385,7 +389,7 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
                     int sensor = jsonArray.getJSONObject(i).getInt("sensor");
                     double startingValue = jsonArray.getJSONObject(i).getDouble("startingValue");
                     double endingValue = jsonArray.getJSONObject(i).getDouble("endingValue");
-                    double gestureDuration = jsonArray.getJSONObject(i).getDouble("gestureDuration");
+                    double gestureDuration = jsonArray.getJSONObject(i).getDouble("maxGestureDuration");
                     return new GestureRecognizer(gestureName, axis, increasing, sensor, startingValue, endingValue, gestureDuration);
                 }
             }
@@ -412,8 +416,11 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
             double x = data.value(Acceleration.class).x();
             double y = data.value(Acceleration.class).y();
             double z = data.value(Acceleration.class).z();
-
-            accelerometerDataString.add(epoch + "," + timestamp + "," + x + "," + y + "," + z + ";");
+            if(timestamp == 0){
+                dataListString.add("accelerometer," + epoch + "," + timestamp + "," + x + "," + y + "," + z + ";");
+            } else {
+                dataListString.add("," + epoch + "," + timestamp + "," + x + "," + y + "," + z + ";");
+            }
         })).continueWith((Continuation<Route, Void>) task -> {
             accelerometer.acceleration().start();
             accelerometer.start();
@@ -438,7 +445,11 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
             double x = data.value(Acceleration.class).x();
             double y = data.value(Acceleration.class).y();
             double z = data.value(Acceleration.class).z();
-            accelerometerDataString.add(epoch + "," + timestamp + "," + x + "," + y + "," + z + ";");
+            if(timestamp == 0){
+                dataListString.add("gravity," + epoch + "," + timestamp + "," + x + "," + y + "," + z + ";");
+            } else {
+                dataListString.add("," + epoch + "," + timestamp + "," + x + "," + y + "," + z + ";");
+            }
         })).continueWith((Continuation<Route, Void>) task -> {
             sensorFusion.gravity().start();
             sensorFusion.start();
@@ -462,7 +473,11 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
             double x = data.value(AngularVelocity.class).x();
             double y = data.value(AngularVelocity.class).y();
             double z = data.value(AngularVelocity.class).z();
-            gyroscopeDataString.add(epoch + "," + timestamp + "," + x + "," + y + "," + z + ";");
+            if(timestamp == 0){
+                dataListString.add("gyroscope," + epoch + "," + timestamp + "," + x + "," + y + "," + z + ";");
+            } else {
+                dataListString.add("," + epoch + "," + timestamp + "," + x + "," + y + "," + z + ";");
+            }
         })).continueWith((Continuation<Route, Void>) task -> {
             gyro.angularVelocity().start();
             gyro.start();
@@ -543,59 +558,32 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
 
     public void writeDataOnDevice() {
         List<String> headerList = new ArrayList<>();
-        headerList.add("Epoch,Timestamp,x-axis,y-axis,z-axis;");
+        headerList.add("Sensor,Epoch,Timestamp,x-axis,y-axis,z-axis;");
 
         SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd_HH-mm-ss", Locale.getDefault());
         final String currentDateTime = sdf.format(new Date());
-
-        //Scrittura dati accelerometro
-        if(!accelerometerDataString.isEmpty()) {
-            File accelerometerDir = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS + File.separator + "GestureRecognition"), "Accelerometer");
-            if(!accelerometerDir.exists()) {
-                accelerometerDir.mkdirs();
+        if(!dataListString.isEmpty()) {
+            File dir = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS + File.separator + "GestureRecognition"), "Measuraments");
+            if(!dir.exists()) {
+                dir.mkdirs();
             }
 
-            final String fileNameWithPath = PATH_DIR + "Accelerometer/registration_" + currentDateTime;
-            List<String> list = new ArrayList<>(accelerometerDataString);
+            final String fileNameWithPath = PATH_DIR + "Measuraments/registration_" + currentDateTime;
+            List<String> list = new ArrayList<>(dataListString);
             easyCsv.createCsvFile(fileNameWithPath, headerList, list, STORAGE_REQUEST_CODE, new FileCallback() {
                 @Override
                 public void onSuccess(File file) {
-                    Log.d("EasyCsv", "Accelerometro file salvato: " + file.getName());
+                    Log.d("EasyCsv", "file salvato: " + file.getName());
                     Toast.makeText(MainActivity.this, "Your file has been saved in folder " + fileNameWithPath, Toast.LENGTH_LONG).show();
                 }
 
                 @Override
                 public void onFail(String err) {
-                    Log.d("EasyCsv", "Accelerometro Errore: " + err);
+                    Log.d("EasyCsv", "file error: " + err);
                     Toast.makeText(MainActivity.this, "ERROR: your file could not be saved", Toast.LENGTH_LONG).show();
                 }
             });
         }
-
-        //Scrittura dati giroscopio
-        if(!gyroscopeDataString.isEmpty()) {
-            File gyroDir = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS + File.separator + "GestureRecognition"), "Gyroscope");
-            if(!gyroDir.exists()) {
-                gyroDir.mkdirs();
-            }
-
-            final String fileNameWithPath = PATH_DIR + "Gyroscope/registration_" + currentDateTime;
-            List<String> list = new ArrayList<>(accelerometerDataString);
-            easyCsv.createCsvFile(fileNameWithPath, headerList, list, STORAGE_REQUEST_CODE, new FileCallback() {
-                @Override
-                public void onSuccess(File file) {
-                    Log.d("EasyCsv", "Giroscopio file salvato: " + file.getName());
-                    Toast.makeText(MainActivity.this, "Your file has been saved in folder " + fileNameWithPath, Toast.LENGTH_LONG).show();
-                }
-
-                @Override
-                public void onFail(String err) {
-                    Log.d("EasyCsv", "Giroscopio Errore: " + err);
-                    Toast.makeText(MainActivity.this, "ERROR: your file could not be saved", Toast.LENGTH_LONG).show();
-                }
-            });
-        }
-
     }
 
     @Override

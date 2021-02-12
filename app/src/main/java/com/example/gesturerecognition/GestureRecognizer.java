@@ -16,6 +16,7 @@ interface GestureEventListener {
 public class GestureRecognizer {
     public static final int SENSOR_ACCELEROMETER = 0;
     public static final int SENSOR_GYRO = 1;
+    public static final int SENSOR_GRAVITY = 2;
     public static final int AXIS_X = 0;
     public static final int AXIS_Y = 1;
     public static final int AXIS_Z = 2;
@@ -130,6 +131,7 @@ public class GestureRecognizer {
     private double returnXValue(Data data) {
         switch (sensor) {
             case SENSOR_ACCELEROMETER:
+            case SENSOR_GRAVITY:
                 return data.value(Acceleration.class).x();
             case SENSOR_GYRO:
                 return fromGyroToAngle(data.value(AngularVelocity.class).x());
@@ -141,6 +143,7 @@ public class GestureRecognizer {
     private double returnYValue(Data data) {
         switch (sensor) {
             case SENSOR_ACCELEROMETER:
+            case SENSOR_GRAVITY:
                 return data.value(Acceleration.class).y();
             case SENSOR_GYRO:
                 return fromGyroToAngle(data.value(AngularVelocity.class).y());
@@ -152,6 +155,7 @@ public class GestureRecognizer {
     private double returnZValue(Data data) {
         switch (sensor) {
             case SENSOR_ACCELEROMETER:
+            case SENSOR_GRAVITY:
                 return data.value(Acceleration.class).z();
             case SENSOR_GYRO:
                 return fromGyroToAngle(data.value(AngularVelocity.class).z());

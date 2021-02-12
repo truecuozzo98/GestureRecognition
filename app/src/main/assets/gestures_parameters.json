@@ -4,19 +4,19 @@
             "name": "arm1",
             "axis": 0,
             "increasing": true,
-            "sensor": 0,
+            "sensor": 2,
             "startingValue": -0.8,
             "endingValue": 0.8,
-            "gestureDuration": 3000
+            "maxGestureDuration": 3000
         }, 
         {
             "name": "arm2",
             "axis": 0,
             "increasing": true,
-            "sensor": 0,
+            "sensor": 2,
             "startingValue": -0.8,
             "endingValue": -0.1,
-            "gestureDuration": 3000
+            "maxGestureDuration": 3000
         }, 
         {
             "name": "arm3",
@@ -25,25 +25,25 @@
             "sensor": 1,
             "startingValue": 70,
             "endingValue": 80,
-            "gestureDuration": 3000
+            "maxGestureDuration": 3000
         }, 
         {
             "name": "leg1",
             "axis": 1,
             "increasing": true,
-            "sensor": 1,
+            "sensor": 2,
             "startingValue": -1.1,
             "endingValue": -0.7,
-            "gestureDuration": 3000
+            "maxGestureDuration": 3000
         },
         {
             "name": "leg2",
             "axis": 0,
             "increasing": false,
-            "sensor": 0,
-            "startingValue": 1.6,
-            "endingValue": 0.5,
-            "gestureDuration": 3000
+            "sensor": 2,
+            "startingValue": 0.8,
+            "endingValue": 0.3,
+            "maxGestureDuration": 3000
         }, 
         {
             "name": "jump",
@@ -52,7 +52,7 @@
             "sensor": 0,
             "startingValue": 1.8,
             "endingValue": 0,
-            "gestureDuration": 3000
+            "maxGestureDuration": 3000
         }
     ]
 }
