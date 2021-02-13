@@ -4,8 +4,10 @@
         <item>Arm1</item>
         <item>Arm2</item>
         <item>Arm3</item>
+        <item>Arm4</item>
         <item>Leg1</item>
         <item>Leg2</item>
+        <item>Wrist</item>
         <item>Jump</item>
     </string-array>
 </resources>

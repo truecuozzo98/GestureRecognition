@@ -6,11 +6,13 @@ import androidx.fragment.app.FragmentTransaction;
 
 import org.json.JSONObject;
 import java.util.ArrayList;
+import java.util.List;
 
 public class Model {
     private static final Model ourInstance = new Model();
     public ArrayList<JSONObject> allGestureList;
     public String connectedDeviceName = null;
+    public static List<String> dataListString = new ArrayList<>();
 
     public static Model getInstance() {
         return ourInstance;

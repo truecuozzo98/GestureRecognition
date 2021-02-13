@@ -35,6 +35,7 @@ public class GestureRecognizer {
     private double gestureStartedTimestamp = 0;
     private boolean startingGestureFound;
 
+    //TODO: generalizzare per ogni asse
     private double currentAngle;
     private double previousTimeGyro;
 
@@ -57,9 +58,10 @@ public class GestureRecognizer {
 
         this.maxGestureDuration = maxGestureDuration;
         this.gestureEventListenerList = new ArrayList<>();
-        currentAngle = 0;
-        currentTime = 0;
         previousTimestamp = 0;
+        currentTime = 0;
+
+        currentAngle = 0;
         previousTimeGyro = 0;
     }
 
@@ -68,8 +70,11 @@ public class GestureRecognizer {
     }
 
     public void recognizeGesture(Data data) {
-        getFormattedTimestamp(data.timestamp().getTimeInMillis());
-        //Log.d("timestamp", "timestamp: " + currentTime + ", previous time: " + previousTimestamp);
+        double epoch = data.timestamp().getTimeInMillis();
+        if(!(previousTimestamp == 0)) {
+            currentTime += (epoch - previousTimestamp) / 1000;
+        }
+        previousTimestamp = epoch;
 
         double value;
         switch (axis) {
@@ -113,6 +118,8 @@ public class GestureRecognizer {
             notifyGestureEnds(timestampStartingValue, gestureStartedTimestamp, currentTime);
             startingGestureFound = false;
         }
+
+        addDataToList(data);
     }
 
     public void notifyGestureStarts(double timestampStart, double timestampEnding) {
@@ -184,11 +191,12 @@ public class GestureRecognizer {
         return currentAngle;
     }
 
-    public double getFormattedTimestamp(double epoch) {
-        if(!(previousTimestamp == 0)) {
-            currentTime += (epoch - previousTimestamp) / 1000;
-        }
-        previousTimestamp = epoch;
-        return currentTime;
+    private void addDataToList(Data data) {
+        long epoch = data.timestamp().getTimeInMillis();
+        double timestamp = currentTime;
+        double x = returnXValue(data);
+        double y = returnYValue(data);
+        double z = returnZValue(data);
+        Model.dataListString.add(epoch + "," + timestamp + "," + x + "," + y + "," + z + ";");
     }
 }

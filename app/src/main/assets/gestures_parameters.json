@@ -26,7 +26,16 @@
             "startingValue": 70,
             "endingValue": 80,
             "maxGestureDuration": 3000
-        }, 
+        },
+        {
+            "name": "arm4",
+            "axis": 1,
+            "increasing": false,
+            "sensor": 2,
+            "startingValue": 0.3,
+            "endingValue": 0.1,
+            "maxGestureDuration": 3000
+        },
         {
             "name": "leg1",
             "axis": 1,
@@ -44,7 +53,16 @@
             "startingValue": 0.8,
             "endingValue": 0.3,
             "maxGestureDuration": 3000
-        }, 
+        },
+        {
+            "name": "wrist",
+            "axis": 0,
+            "increasing": true,
+            "sensor": 1,
+            "startingValue": 70,
+            "endingValue": 80,
+            "maxGestureDuration": 3000
+        },
         {
             "name": "jump",
             "axis": 0,

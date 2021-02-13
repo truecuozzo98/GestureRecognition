@@ -41,8 +41,6 @@ import com.mbientlab.metawear.MetaWearBoard;
 import com.mbientlab.metawear.Route;
 import com.mbientlab.metawear.Subscriber;
 import com.mbientlab.metawear.android.BtleService;
-import com.mbientlab.metawear.data.Acceleration;
-import com.mbientlab.metawear.data.AngularVelocity;
 import com.mbientlab.metawear.module.Accelerometer;
 import com.mbientlab.metawear.module.GyroBmi160;
 import com.mbientlab.metawear.module.Led;
@@ -87,7 +85,6 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
 
     /*private final List<String> accelerometerDataString = new ArrayList<>();
     private final List<String> gyroscopeDataString = new ArrayList<>();*/
-    private final List<String> dataListString = new ArrayList<>();
     public ArrayList<RecognizedGesture> recognizedGestureList = new ArrayList<>();
 
     private final GPSBroadcastReceiver gpsBroadcastReceiver = new GPSBroadcastReceiver();
@@ -145,6 +142,7 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
         easyCsv.setSeparatorColumn(",");
         easyCsv.setSeperatorLine(";");
 
+        //TODO: caricare elementi nello spinner per ogni gesture nel JSON
         Spinner spinner = findViewById(R.id.gesture_spinner);
         ArrayAdapter<CharSequence> adapter = ArrayAdapter.createFromResource(this, R.array.gesture_array, android.R.layout.simple_spinner_item);
         adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
@@ -342,7 +340,7 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
         /*accelerometerDataString.clear();
         gyroscopeDataString.clear();*/
 
-        dataListString.clear();
+        Model.dataListString.clear();
 
         Spinner spinner = findViewById(R.id.gesture_spinner);
         String text = spinner.getSelectedItem().toString();
@@ -419,17 +417,6 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
 
         accelerometer.acceleration().addRouteAsync(source -> source.stream((Subscriber) (data, env) -> {
             gestureRecognizer.recognizeGesture(data);
-
-            long epoch = data.timestamp().getTimeInMillis();
-            double timestamp = gestureRecognizer.getFormattedTimestamp(epoch);
-            double x = data.value(Acceleration.class).x();
-            double y = data.value(Acceleration.class).y();
-            double z = data.value(Acceleration.class).z();
-            if(timestamp == 0){
-                dataListString.add("accelerometer," + epoch + "," + timestamp + "," + x + "," + y + "," + z + ";");
-            } else {
-                dataListString.add("," + epoch + "," + timestamp + "," + x + "," + y + "," + z + ";");
-            }
         })).continueWith((Continuation<Route, Void>) task -> {
             accelerometer.acceleration().start();
             accelerometer.start();
@@ -448,17 +435,6 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
 
         sensorFusion.gravity().addRouteAsync(source -> source.stream((Subscriber) (data, env) -> {
             gestureRecognizer.recognizeGesture(data);
-
-            long epoch = data.timestamp().getTimeInMillis();
-            double timestamp = gestureRecognizer.getFormattedTimestamp(epoch);
-            double x = data.value(Acceleration.class).x();
-            double y = data.value(Acceleration.class).y();
-            double z = data.value(Acceleration.class).z();
-            if(timestamp == 0){
-                dataListString.add("gravity," + epoch + "," + timestamp + "," + x + "," + y + "," + z + ";");
-            } else {
-                dataListString.add("," + epoch + "," + timestamp + "," + x + "," + y + "," + z + ";");
-            }
         })).continueWith((Continuation<Route, Void>) task -> {
             sensorFusion.gravity().start();
             sensorFusion.start();
@@ -476,17 +452,6 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
 
         gyro.angularVelocity().addRouteAsync(source -> source.stream((Subscriber) (data, env) -> {
             gestureRecognizer.recognizeGesture(data);
-
-            long epoch = data.timestamp().getTimeInMillis();
-            double timestamp = gestureRecognizer.getFormattedTimestamp(epoch);
-            double x = data.value(AngularVelocity.class).x();
-            double y = data.value(AngularVelocity.class).y();
-            double z = data.value(AngularVelocity.class).z();
-            if(timestamp == 0){
-                dataListString.add("gyroscope," + epoch + "," + timestamp + "," + x + "," + y + "," + z + ";");
-            } else {
-                dataListString.add("," + epoch + "," + timestamp + "," + x + "," + y + "," + z + ";");
-            }
         })).continueWith((Continuation<Route, Void>) task -> {
             gyro.angularVelocity().start();
             gyro.start();
@@ -528,7 +493,7 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
         Toast.makeText(MainActivity.this, "Stopped", Toast.LENGTH_SHORT).show();
 
         if (checkSelfPermission(android.Manifest.permission.WRITE_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED) {
-            //writeDataOnDevice();
+            writeDataOnDevice();
         } else {
             ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE}, STORAGE_REQUEST_CODE);
         }
@@ -569,18 +534,18 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
 
     public void writeDataOnDevice() {
         List<String> headerList = new ArrayList<>();
-        headerList.add("Sensor,Epoch,Timestamp,x-axis,y-axis,z-axis;");
+        headerList.add("Epoch,Timestamp,x-axis,y-axis,z-axis;");
 
         SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd_HH-mm-ss", Locale.getDefault());
         final String currentDateTime = sdf.format(new Date());
-        if(!dataListString.isEmpty()) {
+        if(!Model.dataListString.isEmpty()) {
             File dir = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS + File.separator + "GestureRecognition"), "Measuraments");
             if(!dir.exists()) {
                 dir.mkdirs();
             }
 
             final String fileNameWithPath = PATH_DIR + "Measuraments/registration_" + currentDateTime;
-            List<String> list = new ArrayList<>(dataListString);
+            List<String> list = new ArrayList<>(Model.dataListString);
             easyCsv.createCsvFile(fileNameWithPath, headerList, list, STORAGE_REQUEST_CODE, new FileCallback() {
                 @Override
                 public void onSuccess(File file) {
