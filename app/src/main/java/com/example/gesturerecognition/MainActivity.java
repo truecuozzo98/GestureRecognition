@@ -143,10 +143,16 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
         easyCsv.setSeperatorLine(";");
 
         //TODO: caricare elementi nello spinner per ogni gesture nel JSON
+        ArrayList<String> arrayList = loadSpinnerGestureNames();
+
         Spinner spinner = findViewById(R.id.gesture_spinner);
-        ArrayAdapter<CharSequence> adapter = ArrayAdapter.createFromResource(this, R.array.gesture_array, android.R.layout.simple_spinner_item);
-        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-        spinner.setAdapter(adapter);
+        ArrayAdapter<CharSequence> spinnerAdapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_item);
+        spinnerAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        spinner.setAdapter(spinnerAdapter);
+        for(String x : arrayList) {
+            spinnerAdapter.add(x);
+        }
+        spinnerAdapter.notifyDataSetChanged();
         spinner.setOnItemSelectedListener(this);
     }
 
@@ -514,6 +520,24 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
         }
         return json;
     }
+
+    public ArrayList<String> loadSpinnerGestureNames() {
+        ArrayList<String> arrayList = new ArrayList<>();
+
+        JSONObject jsonObject = null;
+        try {
+            jsonObject = new JSONObject(loadJSONGestureParameters());
+            JSONArray jsonArray = jsonObject.getJSONArray("gestures");
+            for (int i = 0; i < jsonArray.length() ; i++) {
+                arrayList.add(jsonArray.getJSONObject(i).getString("name"));
+
+            }
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
+        return arrayList;
+    }
+
 
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {

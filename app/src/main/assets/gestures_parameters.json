@@ -55,6 +55,15 @@
             "maxGestureDuration": 3000
         },
         {
+            "name": "leg3",
+            "axis": 0,
+            "increasing": false,
+            "sensor": 2,
+            "startingValue": 0.8,
+            "endingValue": 0.2,
+            "maxGestureDuration": 3000
+        },
+        {
             "name": "wrist",
             "axis": 0,
             "increasing": true,
