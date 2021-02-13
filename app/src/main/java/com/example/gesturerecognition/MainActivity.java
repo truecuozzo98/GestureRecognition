@@ -83,8 +83,6 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
     private Accelerometer accelerometer;
     private GyroBmi160 gyro;
 
-    /*private final List<String> accelerometerDataString = new ArrayList<>();
-    private final List<String> gyroscopeDataString = new ArrayList<>();*/
     public ArrayList<RecognizedGesture> recognizedGestureList = new ArrayList<>();
 
     private final GPSBroadcastReceiver gpsBroadcastReceiver = new GPSBroadcastReceiver();
@@ -142,7 +140,6 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
         easyCsv.setSeparatorColumn(",");
         easyCsv.setSeperatorLine(";");
 
-        //TODO: caricare elementi nello spinner per ogni gesture nel JSON
         ArrayList<String> arrayList = loadSpinnerGestureNames();
 
         Spinner spinner = findViewById(R.id.gesture_spinner);
@@ -524,7 +521,7 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
     public ArrayList<String> loadSpinnerGestureNames() {
         ArrayList<String> arrayList = new ArrayList<>();
 
-        JSONObject jsonObject = null;
+        JSONObject jsonObject;
         try {
             jsonObject = new JSONObject(loadJSONGestureParameters());
             JSONArray jsonArray = jsonObject.getJSONArray("gestures");
