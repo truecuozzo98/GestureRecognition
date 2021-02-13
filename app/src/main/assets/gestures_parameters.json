@@ -38,11 +38,11 @@
         },
         {
             "name": "leg1",
-            "axis": 1,
-            "increasing": true,
+            "axis": 0,
+            "increasing": false,
             "sensor": 2,
-            "startingValue": -1.1,
-            "endingValue": -0.7,
+            "startingValue": -0.2,
+            "endingValue": -0.6,
             "maxGestureDuration": 3000
         },
         {
