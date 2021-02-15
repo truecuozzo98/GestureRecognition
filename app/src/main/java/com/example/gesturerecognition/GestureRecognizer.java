@@ -37,7 +37,6 @@ public class GestureRecognizer {
 
     //TODO: generalizzare per ogni asse
     private double currentAngle;
-    private double previousTimeGyro;
 
     ArrayList<GestureEventListener> gestureEventListenerList;
     private double previousTimestamp;
@@ -58,11 +57,10 @@ public class GestureRecognizer {
 
         this.maxGestureDuration = maxGestureDuration;
         this.gestureEventListenerList = new ArrayList<>();
-        previousTimestamp = 0;
-        currentTime = 0;
+        this.previousTimestamp = 0;
+        this.currentTime = 0;
 
-        currentAngle = 0;
-        previousTimeGyro = 0;
+        this.currentAngle = 0;
     }
 
     public void addGestureEventListener(GestureEventListener gestureEventListener) {
@@ -74,18 +72,17 @@ public class GestureRecognizer {
         if(!(previousTimestamp == 0)) {
             currentTime += (epoch - previousTimestamp) / 1000;
         }
-        previousTimestamp = epoch;
 
         double value;
         switch (axis) {
             case AXIS_X:
-                value = returnXValue(data);
+                value = returnXValue(data, epoch);
                 break;
             case AXIS_Y:
-                value = returnYValue(data);
+                value = returnYValue(data, epoch);
                 break;
             case AXIS_Z:
-                value = returnZValue(data);
+                value = returnZValue(data, epoch);
                 break;
             default:
                 throw new IllegalStateException("Unexpected value: " + axis);
@@ -120,6 +117,8 @@ public class GestureRecognizer {
         }
 
         addDataToList(data);
+        previousTimestamp = epoch;
+
     }
 
     public void notifyGestureStarts(double timestampStart, double timestampEnding) {
@@ -135,37 +134,37 @@ public class GestureRecognizer {
         }
     }
 
-    private double returnXValue(Data data) {
+    private double returnXValue(Data data, double epoch) {
         switch (sensor) {
             case SENSOR_ACCELEROMETER:
             case SENSOR_GRAVITY:
                 return data.value(Acceleration.class).x();
             case SENSOR_GYRO:
-                return fromGyroToAngle(data.value(AngularVelocity.class).x());
+                return fromGyroToAngle(data.value(AngularVelocity.class).x(), epoch);
             default:
                 throw new IllegalStateException("Unexpected value: " + sensor);
         }
     }
 
-    private double returnYValue(Data data) {
+    private double returnYValue(Data data, double epoch) {
         switch (sensor) {
             case SENSOR_ACCELEROMETER:
             case SENSOR_GRAVITY:
                 return data.value(Acceleration.class).y();
             case SENSOR_GYRO:
-                return fromGyroToAngle(data.value(AngularVelocity.class).y());
+                return fromGyroToAngle(data.value(AngularVelocity.class).y(), epoch);
             default:
                 throw new IllegalStateException("Unexpected value: " + sensor);
         }
     }
 
-    private double returnZValue(Data data) {
+    private double returnZValue(Data data, double epoch) {
         switch (sensor) {
             case SENSOR_ACCELEROMETER:
             case SENSOR_GRAVITY:
                 return data.value(Acceleration.class).z();
             case SENSOR_GYRO:
-                return fromGyroToAngle(data.value(AngularVelocity.class).z());
+                return fromGyroToAngle(data.value(AngularVelocity.class).z(), epoch);
             default:
                 throw new IllegalStateException("Unexpected value: " + sensor);
         }
@@ -175,9 +174,12 @@ public class GestureRecognizer {
         return sensor;
     }
 
-    private double fromGyroToAngle(double sample) {
+    private double fromGyroToAngle(double sample, double epoch) {
         //Calculate the time elapsed since the last sample by differencing the time samples
-        double deltaTime = currentTime - previousTimeGyro;
+        double deltaTime = 0;
+        if(previousTimestamp != 0) {
+            deltaTime = (epoch - previousTimestamp) / 1000;
+        }
 
         //Multiply the sample and the time difference - this is your change in angle since the last sample
         double deltaAngle = sample * deltaTime;
@@ -186,17 +188,16 @@ public class GestureRecognizer {
         currentAngle += deltaAngle;
 
         //Save the current time as previous time
-        previousTimeGyro = currentTime;
+        previousTimestamp = epoch;
 
         return currentAngle;
     }
 
     private void addDataToList(Data data) {
         long epoch = data.timestamp().getTimeInMillis();
-        double timestamp = currentTime;
-        double x = returnXValue(data);
-        double y = returnYValue(data);
-        double z = returnZValue(data);
-        Model.dataListString.add(epoch + "," + timestamp + "," + x + "," + y + "," + z + ";");
+        double x = returnXValue(data, epoch);
+        double y = returnYValue(data, epoch);
+        double z = returnZValue(data, epoch);
+        Model.dataListString.add(epoch + "," + currentTime + "," + x + "," + y + "," + z + ";");
     }
 }
