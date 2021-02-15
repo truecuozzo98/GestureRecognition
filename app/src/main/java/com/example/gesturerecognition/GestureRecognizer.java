@@ -52,11 +52,6 @@ public class GestureRecognizer {
     private double gesture2StartedTimestamp;
     private boolean startingGesture2Found;
 
-    /*private boolean startingValue2Found;
-    private double timestampStartingValue2;
-    private boolean startingGesture2Found;
-    private double gesture2StartedTimestamp;*/
-
     public GestureRecognizer(String gestureName, int axis, boolean increasing, int sensor, double startingValue, double endingValue, double maxGestureDuration) {
         this.gestureName = gestureName;
         this.axis = axis;
@@ -139,30 +134,6 @@ public class GestureRecognizer {
             checkGesture2(value);
         }
 
-        /*
-        //Gesture2
-        if(value > -1 * startingValue) {
-            startingValue2Found = true;
-            timestampStartingValue2 = currentTime;
-        }
-
-        if(startingValue2Found && value <= -1 * endingValue) {
-            double diff = currentTime - timestampStartingValue2;
-
-            if(diff <= maxGestureDuration) {
-                startingValue2Found = false;
-                notifyGesture2Starts(timestampStartingValue2, currentTime);
-
-                gesture2StartedTimestamp = currentTime;
-                startingGesture2Found = true;
-            }
-        }
-
-        if(startingGesture2Found && value > -1 * endingValue) {
-            notifyGesture2Ends(timestampStartingValue2, gesture2StartedTimestamp, currentTime);
-            startingGesture2Found = false;
-        }*/
-
         addDataToList(data);
         previousTimestamp = epoch;
 
@@ -223,34 +194,6 @@ public class GestureRecognizer {
             startingGesture2Found = false;
         }
     }
-
-    /*private void checkGesture2(double value) {
-        if(increasing){
-            value = -1 * value;
-        }
-
-        if(value < startingValue2) {
-            startingValue2Found = true;
-            timestampStartingValue2 = currentTime;
-        }
-
-        if(startingValue2Found && value >= endingValue2) {
-            double diff = currentTime - timestampStartingValue2;
-
-            if(diff <= maxGestureDuration) {
-                startingValue2Found = false;
-                notifyGesture2Starts(timestampStartingValue2, currentTime);
-
-                gesture2StartedTimestamp = currentTime;
-                startingGesture2Found = true;
-            }
-        }
-
-        if(startingGesture2Found && value < endingValue2) {
-            notifyGesture2Ends(timestampStartingValue, gesture2StartedTimestamp, currentTime);
-            startingGesture2Found = false;
-        }
-    }*/
 
     public void notifyGestureStarts(double timestampStart, double timestampEnding) {
         for(GestureEventListener gel : gestureEventListenerList) {

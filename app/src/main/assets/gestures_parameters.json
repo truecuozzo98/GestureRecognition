@@ -25,6 +25,8 @@
             "sensor": 1,
             "startingValue": 20,
             "endingValue": 80,
+            "startingValue2": -20,
+            "endingValue2": -70,
             "maxGestureDuration": 3000
         },
         {

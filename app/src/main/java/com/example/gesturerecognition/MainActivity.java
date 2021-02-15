@@ -437,11 +437,9 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
                     double gestureDuration = jsonArray.getJSONObject(i).getDouble("maxGestureDuration");
 
                     try {
-                        if(gestureName.equals("wrist")) {
-                            double startingValue2 = jsonArray.getJSONObject(i).getDouble("startingValue2");
-                            double endingValue2 = jsonArray.getJSONObject(i).getDouble("endingValue2");
-                            return new GestureRecognizer(gestureName, axis, increasing, sensor, startingValue, endingValue, startingValue2, endingValue2, gestureDuration);
-                        }
+                        double startingValue2 = jsonArray.getJSONObject(i).getDouble("startingValue2");
+                        double endingValue2 = jsonArray.getJSONObject(i).getDouble("endingValue2");
+                        return new GestureRecognizer(gestureName, axis, increasing, sensor, startingValue, endingValue, startingValue2, endingValue2, gestureDuration);
                     } catch (JSONException e) {
                         e.printStackTrace();
                     }
