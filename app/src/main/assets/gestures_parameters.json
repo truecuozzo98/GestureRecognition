@@ -23,7 +23,7 @@
             "axis": 2,
             "increasing": true,
             "sensor": 1,
-            "startingValue": 70,
+            "startingValue": 20,
             "endingValue": 80,
             "maxGestureDuration": 3000
         },
@@ -66,10 +66,12 @@
         {
             "name": "wrist",
             "axis": 0,
-            "increasing": true,
+            "increasing": false,
             "sensor": 1,
-            "startingValue": 70,
-            "endingValue": 80,
+            "startingValue": -20,
+            "endingValue": -60,
+            "startingValue2": 20,
+            "endingValue2": 80,
             "maxGestureDuration": 3000
         },
         {

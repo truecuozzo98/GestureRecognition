@@ -23,6 +23,7 @@ import android.view.View;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
+import android.widget.LinearLayout;
 import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -349,16 +350,20 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
         String text = spinner.getSelectedItem().toString();
 
         gestureRecognizer = initGestureRecognizer(text);
-        assert gestureRecognizer != null;
+        if(gestureRecognizer == null) { return; }
         gestureRecognizer.addGestureEventListener(new GestureEventListener() {
             @Override
             public void onGestureStarts(double timestampStart, double timestampEnding) {
                 Log.d("onGestureStarts", "onGestureStarts, timestampStart: " + timestampStart + ", timestampEnding: " + timestampEnding);
-                TextView tv1 = findViewById(R.id.counterGestures);
-                int counter = Integer.parseInt(tv1.getText().toString()) +1;
-                runOnUiThread(() -> tv.setText(String.valueOf(counter)));
+                int counter = Integer.parseInt(tv.getText().toString()) +1;
 
-                runOnUiThread(() -> tvGestureStatus.setText("gesture started"));
+                runOnUiThread(() -> {
+                    tv.setText(String.valueOf(counter));
+                    //tvGestureStatus.setText("gesture started");
+
+                    LinearLayout ll = findViewById(R.id.leftArea);
+                    ll.setBackgroundResource(R.color.emerald);
+                });
             }
 
             @Override
@@ -366,8 +371,38 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
                 Log.d("onGestureEnds", "onGestureEnds, rg:" + rg.toStringRoundedDecimal());
                 recognizedGestureList.add(rg);
 
-                final String text = "gesture ended, it lasted: " + rg.getFormattedGestureDuration() + " seconds";
-                runOnUiThread(() -> tvGestureStatus.setText(text));
+                //final String text = "gesture ended, it lasted: " + rg.getFormattedGestureDuration() + " seconds";
+                runOnUiThread(() -> {
+                    //tvGestureStatus.setText(text);
+                    LinearLayout ll = findViewById(R.id.leftArea);
+                    ll.setBackgroundResource(R.color.red);
+                });
+            }
+
+            @Override
+            public void onGesture2Starts(double timestampStart, double timestampEnding) {
+                Log.d("onGesture2Starts", "onGesture2Starts, timestampStart: " + timestampStart + ", timestampEnding: " + timestampEnding);
+                int counter = Integer.parseInt(tv.getText().toString()) +1;
+
+                runOnUiThread(() -> {
+                    tv.setText(String.valueOf(counter));
+                    //tvGestureStatus.setText("gesture started");
+                    LinearLayout ll = findViewById(R.id.rightArea);
+                    ll.setBackgroundResource(R.color.emerald);
+                });
+            }
+
+            @Override
+            public void onGesture2Ends(RecognizedGesture rg) {
+                Log.d("onGesture2Ends", "onGesture2Ends, rg:" + rg.toStringRoundedDecimal());
+                recognizedGestureList.add(rg);
+
+                //final String text = "gesture ended, it lasted: " + rg.getFormattedGestureDuration() + " seconds";
+                runOnUiThread(() -> {
+                    //tvGestureStatus.setText(text);
+                    LinearLayout ll = findViewById(R.id.rightArea);
+                    ll.setBackgroundResource(R.color.red);
+                });
             }
         });
 
@@ -400,6 +435,17 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
                     double startingValue = jsonArray.getJSONObject(i).getDouble("startingValue");
                     double endingValue = jsonArray.getJSONObject(i).getDouble("endingValue");
                     double gestureDuration = jsonArray.getJSONObject(i).getDouble("maxGestureDuration");
+
+                    try {
+                        if(gestureName.equals("wrist")) {
+                            double startingValue2 = jsonArray.getJSONObject(i).getDouble("startingValue2");
+                            double endingValue2 = jsonArray.getJSONObject(i).getDouble("endingValue2");
+                            return new GestureRecognizer(gestureName, axis, increasing, sensor, startingValue, endingValue, startingValue2, endingValue2, gestureDuration);
+                        }
+                    } catch (JSONException e) {
+                        e.printStackTrace();
+                    }
+
                     return new GestureRecognizer(gestureName, axis, increasing, sensor, startingValue, endingValue, gestureDuration);
                 }
             }
