@@ -9,10 +9,8 @@ import com.mbientlab.metawear.data.AngularVelocity;
 import java.util.ArrayList;
 
 interface GestureEventListener {
-    void onFirstGestureStarts(double timestampStart, double timestampEnding);
-    void onFirstGestureEnds(RecognizedGesture rg);
-    void onSecondGestureStarts(double timestampStart, double timestampEnding);
-    void onSecondGestureEnds(RecognizedGesture rg);
+    void onGestureStarts(double timestampStart, double timestampEnding);
+    void onGestureEnds(RecognizedGesture rg);
 }
 
 public class GestureRecognizer {
@@ -27,15 +25,15 @@ public class GestureRecognizer {
     private final int axis;
     private final boolean increasing; //true se i dati tra la soglia di partenza e quella finale crescono (false viceversa)
     private final int sensor;
-    private final double firstStartingValue;
-    private final double firstEndingValue;
+    private final double StartingValue;
+    private final double endingValue;
 
     private final double maxGestureDuration; //in millis
-    private double timestampFirstStartingValue = 0;
-    private boolean firstStartingValueFound;
+    private double timestampStartingValue = 0;
+    private boolean startingValueFound;
 
-    private double firstGestureStartedTimestamp = 0;
-    private boolean startingFirstGestureFound;
+    private double gestureStartedTimestamp = 0;
+    private boolean startingGestureFound;
 
     //TODO: generalizzare per ogni asse
     private double currentAngle;
@@ -45,24 +43,24 @@ public class GestureRecognizer {
     private double currentTime;
     
     //second gesture
-    private final Double secondStartingValue;
+    /*private final Double secondStartingValue;
     private final Double secondEndingValue;
     private boolean secondStartingValueFound;
     private double timestampSecondStartingValue;
     private double secondGestureStartedTimestamp;
-    private boolean startingSecondGestureFound;
+    private boolean startingSecondGestureFound;*/
 
-    public GestureRecognizer(String gestureName, int axis, boolean increasing, int sensor, double firstStartingValue, double firstEndingValue, double maxGestureDuration) {
+    public GestureRecognizer(String gestureName, int axis, boolean increasing, int sensor, double StartingValue, double endingValue, double maxGestureDuration) {
         this.gestureName = gestureName;
         this.axis = axis;
         this.increasing = increasing;
         this.sensor = sensor;
         if(increasing) {
-            this.firstStartingValue = firstStartingValue;
-            this.firstEndingValue = firstEndingValue;
+            this.StartingValue = StartingValue;
+            this.endingValue = endingValue;
         } else {
-            this.firstStartingValue = -1 * firstStartingValue;
-            this.firstEndingValue = -1 * firstEndingValue;
+            this.StartingValue = -1 * StartingValue;
+            this.endingValue = -1 * endingValue;
         }
 
         this.maxGestureDuration = maxGestureDuration;
@@ -72,25 +70,25 @@ public class GestureRecognizer {
 
         this.currentAngle = 0;
 
-        secondStartingValue = null;
-        secondEndingValue = null;
+        /*secondStartingValue = null;
+        secondEndingValue = null;*/
     }
 
-    public GestureRecognizer(String gestureName, int axis, boolean increasing, int sensor, double firstStartingValue, double firstEndingValue, double secondStartingValue, double secondEndingValue, double maxGestureDuration) {
+    public GestureRecognizer(String gestureName, int axis, boolean increasing, int sensor, double StartingValue, double endingValue, double secondStartingValue, double secondEndingValue, double maxGestureDuration) {
         this.gestureName = gestureName;
         this.axis = axis;
         this.increasing = increasing;
         this.sensor = sensor;
         if(increasing) {
-            this.firstStartingValue = firstStartingValue;
-            this.firstEndingValue = firstEndingValue;
-            this.secondStartingValue = -1 * secondStartingValue;
-            this.secondEndingValue = -1 * secondEndingValue;
+            this.StartingValue = StartingValue;
+            this.endingValue = endingValue;
+            /*this.secondStartingValue = -1 * secondStartingValue;
+            this.secondEndingValue = -1 * secondEndingValue;*/
         } else {
-            this.firstStartingValue = -1 * firstStartingValue;
-            this.firstEndingValue = -1 * firstEndingValue;
-            this.secondStartingValue = secondStartingValue;
-            this.secondEndingValue = secondEndingValue;
+            this.StartingValue = -1 * StartingValue;
+            this.endingValue = -1 * endingValue;
+            /*this.secondStartingValue = secondStartingValue;
+            this.secondEndingValue = secondEndingValue;*/
         }
 
         this.maxGestureDuration = maxGestureDuration;
@@ -128,84 +126,50 @@ public class GestureRecognizer {
 
         Log.d("value", "value: " + value);
 
-        checkFirstGesture(value);
+        if(!increasing){
+            value = -1 * value;
+        }
 
-        if(secondStartingValue != null) {
-            checkSecondGesture(value);
+        if(value < StartingValue) {
+            startingValueFound = true;
+            timestampStartingValue = currentTime;
+        }
+
+        if(startingValueFound && value >= endingValue) {
+            double diff = currentTime - timestampStartingValue;
+
+            if(diff <= maxGestureDuration) {
+                startingValueFound = false;
+                notifyGestureStarts(timestampStartingValue, currentTime);
+
+                gestureStartedTimestamp = currentTime;
+                startingGestureFound = true;
+            }
+        }
+
+        if(startingGestureFound && value < endingValue) {
+            notifyGestureEnds(timestampStartingValue, gestureStartedTimestamp, currentTime);
+            startingGestureFound = false;
         }
 
         previousTimestamp = epoch;
     }
 
-    private void checkFirstGesture(double value) {
-        if(!increasing){
-            value = -1 * value;
-        }
 
-        if(value < firstStartingValue) {
-            firstStartingValueFound = true;
-            timestampFirstStartingValue = currentTime;
-        }
-
-        if(firstStartingValueFound && value >= firstEndingValue) {
-            double diff = currentTime - timestampFirstStartingValue;
-
-            if(diff <= maxGestureDuration) {
-                firstStartingValueFound = false;
-                notifyFirstGestureStarts(timestampFirstStartingValue, currentTime);
-
-                firstGestureStartedTimestamp = currentTime;
-                startingFirstGestureFound = true;
-            }
-        }
-
-        if(startingFirstGestureFound && value < firstEndingValue) {
-            notifyFirstGestureEnds(timestampFirstStartingValue, firstGestureStartedTimestamp, currentTime);
-            startingFirstGestureFound = false;
-        }
-    }
-
-    private void checkSecondGesture(double value) {
-        if(increasing){
-            value = -1 * value;
-        }
-
-        if(value < secondStartingValue) {
-            secondStartingValueFound = true;
-            timestampSecondStartingValue = currentTime;
-        }
-
-        if(secondStartingValueFound && value >= secondEndingValue) {
-            double diff = currentTime - timestampSecondStartingValue;
-
-            if(diff <= maxGestureDuration) {
-                secondStartingValueFound = false;
-                notifySecondGestureStarts(timestampSecondStartingValue, currentTime);
-
-                secondGestureStartedTimestamp = currentTime;
-                startingSecondGestureFound = true;
-            }
-        }
-
-        if(startingSecondGestureFound && value < secondEndingValue) {
-            notifySecondGestureEnds(timestampSecondStartingValue, secondGestureStartedTimestamp, currentTime);
-            startingSecondGestureFound = false;
-        }
-    }
-
-    public void notifyFirstGestureStarts(double timestampStart, double timestampEnding) {
+    public void notifyGestureStarts(double timestampStart, double timestampEnding) {
         for(GestureEventListener gel : gestureEventListenerList) {
-            gel.onFirstGestureStarts(timestampStart, timestampEnding);
+            gel.onGestureStarts(timestampStart, timestampEnding);
         }
     }
 
-    public void notifyFirstGestureEnds(double timestampStart, double timestampEnding, double timestampEndingGesture) {
+    public void notifyGestureEnds(double timestampStart, double timestampEnding, double timestampEndingGesture) {
         RecognizedGesture rg = new RecognizedGesture(gestureName, timestampStart, timestampEnding, timestampEndingGesture);
         for(GestureEventListener gel : gestureEventListenerList) {
-            gel.onFirstGestureEnds(rg);
+            gel.onGestureEnds(rg);
         }
     }
 
+    /*
     public void notifySecondGestureStarts(double timestampStart, double timestampEnding) {
         for(GestureEventListener gel : gestureEventListenerList) {
             gel.onSecondGestureStarts(timestampStart, timestampEnding);
@@ -218,7 +182,7 @@ public class GestureRecognizer {
             gel.onSecondGestureEnds(rg);
         }
     }
-
+*/
     private double returnXValue(Data data, double epoch) {
         switch (sensor) {
             case SENSOR_ACCELEROMETER:
