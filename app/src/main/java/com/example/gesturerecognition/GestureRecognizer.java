@@ -9,10 +9,10 @@ import com.mbientlab.metawear.data.AngularVelocity;
 import java.util.ArrayList;
 
 interface GestureEventListener {
-    void onGestureStarts(double timestampStart, double timestampEnding);
-    void onGestureEnds(RecognizedGesture rg);
-    void onGesture2Starts(double timestampStart, double timestampEnding);
-    void onGesture2Ends(RecognizedGesture rg);
+    void onFirstGestureStarts(double timestampStart, double timestampEnding);
+    void onFirstGestureEnds(RecognizedGesture rg);
+    void onSecondGestureStarts(double timestampStart, double timestampEnding);
+    void onSecondGestureEnds(RecognizedGesture rg);
 }
 
 public class GestureRecognizer {
@@ -128,18 +128,16 @@ public class GestureRecognizer {
 
         Log.d("value", "value: " + value);
 
-        checkGesture(value);
+        checkFirstGesture(value);
 
         if(startingValue2 != null) {
-            checkGesture2(value);
+            checkSecondGesture(value);
         }
 
-        addDataToList(data);
         previousTimestamp = epoch;
-
     }
 
-    private void checkGesture(double value) {
+    private void checkFirstGesture(double value) {
         if(!increasing){
             value = -1 * value;
         }
@@ -154,7 +152,7 @@ public class GestureRecognizer {
 
             if(diff <= maxGestureDuration) {
                 startingValueFound = false;
-                notifyGestureStarts(timestampStartingValue, currentTime);
+                notifyFirstGestureStarts(timestampStartingValue, currentTime);
 
                 gestureStartedTimestamp = currentTime;
                 startingGestureFound = true;
@@ -162,12 +160,12 @@ public class GestureRecognizer {
         }
 
         if(startingGestureFound && value < endingValue) {
-            notifyGestureEnds(timestampStartingValue, gestureStartedTimestamp, currentTime);
+            notifyFirstGestureEnds(timestampStartingValue, gestureStartedTimestamp, currentTime);
             startingGestureFound = false;
         }
     }
 
-    private void checkGesture2(double value) {
+    private void checkSecondGesture(double value) {
         if(increasing){
             value = -1 * value;
         }
@@ -182,7 +180,7 @@ public class GestureRecognizer {
 
             if(diff <= maxGestureDuration) {
                 startingValue2Found = false;
-                notifyGesture2Starts(timestampStartingValue2, currentTime);
+                notifySecondGestureStarts(timestampStartingValue2, currentTime);
 
                 gesture2StartedTimestamp = currentTime;
                 startingGesture2Found = true;
@@ -190,34 +188,34 @@ public class GestureRecognizer {
         }
 
         if(startingGesture2Found && value < endingValue2) {
-            notifyGesture2Ends(timestampStartingValue2, gesture2StartedTimestamp, currentTime);
+            notifySecondGestureEnds(timestampStartingValue2, gesture2StartedTimestamp, currentTime);
             startingGesture2Found = false;
         }
     }
 
-    public void notifyGestureStarts(double timestampStart, double timestampEnding) {
+    public void notifyFirstGestureStarts(double timestampStart, double timestampEnding) {
         for(GestureEventListener gel : gestureEventListenerList) {
-            gel.onGestureStarts(timestampStart, timestampEnding);
+            gel.onFirstGestureStarts(timestampStart, timestampEnding);
         }
     }
 
-    public void notifyGestureEnds(double timestampStart, double timestampEnding, double timestampEndingGesture) {
+    public void notifyFirstGestureEnds(double timestampStart, double timestampEnding, double timestampEndingGesture) {
         RecognizedGesture rg = new RecognizedGesture(gestureName, timestampStart, timestampEnding, timestampEndingGesture);
         for(GestureEventListener gel : gestureEventListenerList) {
-            gel.onGestureEnds(rg);
+            gel.onFirstGestureEnds(rg);
         }
     }
 
-    public void notifyGesture2Starts(double timestampStart, double timestampEnding) {
+    public void notifySecondGestureStarts(double timestampStart, double timestampEnding) {
         for(GestureEventListener gel : gestureEventListenerList) {
-            gel.onGesture2Starts(timestampStart, timestampEnding);
+            gel.onSecondGestureStarts(timestampStart, timestampEnding);
         }
     }
 
-    public void notifyGesture2Ends(double timestampStart, double timestampEnding, double timestampEndingGesture) {
+    public void notifySecondGestureEnds(double timestampStart, double timestampEnding, double timestampEndingGesture) {
         RecognizedGesture rg = new RecognizedGesture(gestureName, timestampStart, timestampEnding, timestampEndingGesture);
         for(GestureEventListener gel : gestureEventListenerList) {
-            gel.onGesture2Ends(rg);
+            gel.onSecondGestureEnds(rg);
         }
     }
 
@@ -280,11 +278,7 @@ public class GestureRecognizer {
         return currentAngle;
     }
 
-    private void addDataToList(Data data) {
-        long epoch = data.timestamp().getTimeInMillis();
-        double x = returnXValue(data, epoch);
-        double y = returnYValue(data, epoch);
-        double z = returnZValue(data, epoch);
-        Model.dataListString.add(epoch + "," + currentTime + "," + x + "," + y + "," + z + ";");
+    public double getCurrentTime() {
+        return currentTime;
     }
 }

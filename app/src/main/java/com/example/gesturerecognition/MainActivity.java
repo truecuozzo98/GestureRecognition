@@ -42,6 +42,8 @@ import com.mbientlab.metawear.MetaWearBoard;
 import com.mbientlab.metawear.Route;
 import com.mbientlab.metawear.Subscriber;
 import com.mbientlab.metawear.android.BtleService;
+import com.mbientlab.metawear.data.Acceleration;
+import com.mbientlab.metawear.data.AngularVelocity;
 import com.mbientlab.metawear.module.Accelerometer;
 import com.mbientlab.metawear.module.GyroBmi160;
 import com.mbientlab.metawear.module.Led;
@@ -353,7 +355,7 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
         if(gestureRecognizer == null) { return; }
         gestureRecognizer.addGestureEventListener(new GestureEventListener() {
             @Override
-            public void onGestureStarts(double timestampStart, double timestampEnding) {
+            public void onFirstGestureStarts(double timestampStart, double timestampEnding) {
                 Log.d("onGestureStarts", "onGestureStarts, timestampStart: " + timestampStart + ", timestampEnding: " + timestampEnding);
                 int counter = Integer.parseInt(tv.getText().toString()) +1;
 
@@ -367,7 +369,7 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
             }
 
             @Override
-            public void onGestureEnds(RecognizedGesture rg) {
+            public void onFirstGestureEnds(RecognizedGesture rg) {
                 Log.d("onGestureEnds", "onGestureEnds, rg:" + rg.toStringRoundedDecimal());
                 recognizedGestureList.add(rg);
 
@@ -380,7 +382,7 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
             }
 
             @Override
-            public void onGesture2Starts(double timestampStart, double timestampEnding) {
+            public void onSecondGestureStarts(double timestampStart, double timestampEnding) {
                 Log.d("onGesture2Starts", "onGesture2Starts, timestampStart: " + timestampStart + ", timestampEnding: " + timestampEnding);
                 int counter = Integer.parseInt(tv.getText().toString()) +1;
 
@@ -393,7 +395,7 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
             }
 
             @Override
-            public void onGesture2Ends(RecognizedGesture rg) {
+            public void onSecondGestureEnds(RecognizedGesture rg) {
                 Log.d("onGesture2Ends", "onGesture2Ends, rg:" + rg.toStringRoundedDecimal());
                 recognizedGestureList.add(rg);
 
@@ -464,6 +466,13 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
 
         accelerometer.acceleration().addRouteAsync(source -> source.stream((Subscriber) (data, env) -> {
             gestureRecognizer.recognizeGesture(data);
+
+            long epoch = data.timestamp().getTimeInMillis();
+            double timestamp = gestureRecognizer.getCurrentTime();
+            double x = data.value(Acceleration.class).x();
+            double y = data.value(Acceleration.class).y();
+            double z = data.value(Acceleration.class).z();
+            Model.dataListString.add(epoch + "," + timestamp + "," + x + "," + y + "," + z + ";");
         })).continueWith((Continuation<Route, Void>) task -> {
             accelerometer.acceleration().start();
             accelerometer.start();
@@ -482,6 +491,13 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
 
         sensorFusion.gravity().addRouteAsync(source -> source.stream((Subscriber) (data, env) -> {
             gestureRecognizer.recognizeGesture(data);
+
+            long epoch = data.timestamp().getTimeInMillis();
+            double timestamp = gestureRecognizer.getCurrentTime();
+            double x = data.value(Acceleration.class).x();
+            double y = data.value(Acceleration.class).y();
+            double z = data.value(Acceleration.class).z();
+            Model.dataListString.add(epoch + "," + timestamp + "," + x + "," + y + "," + z + ";");
         })).continueWith((Continuation<Route, Void>) task -> {
             sensorFusion.gravity().start();
             sensorFusion.start();
@@ -499,6 +515,13 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
 
         gyro.angularVelocity().addRouteAsync(source -> source.stream((Subscriber) (data, env) -> {
             gestureRecognizer.recognizeGesture(data);
+
+            long epoch = data.timestamp().getTimeInMillis();
+            double timestamp = gestureRecognizer.getCurrentTime();
+            double x = data.value(AngularVelocity.class).x();
+            double y = data.value(AngularVelocity.class).y();
+            double z = data.value(AngularVelocity.class).z();
+            Model.dataListString.add(epoch + "," + timestamp + "," + x + "," + y + "," + z + ";");
         })).continueWith((Continuation<Route, Void>) task -> {
             gyro.angularVelocity().start();
             gyro.start();
