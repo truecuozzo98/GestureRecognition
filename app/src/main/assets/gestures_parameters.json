@@ -71,7 +71,7 @@
             "increasing": false,
             "sensor": 1,
             "startingValue": -20,
-            "endingValue": -60,
+            "endingValue": -50,
             "startingValue2": 20,
             "endingValue2": 80,
             "maxGestureDuration": 3000
