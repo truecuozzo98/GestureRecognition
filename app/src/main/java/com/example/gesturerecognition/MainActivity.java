@@ -117,6 +117,9 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
         ///< Bind the service when the activity is created
         getApplicationContext().bindService(new Intent(this, BtleService.class), this, Context.BIND_AUTO_CREATE);
 
+        View rightArea = findViewById(R.id.rightArea);
+        rightArea.setVisibility(View.GONE);
+
         Button connect = findViewById(R.id.buttonConnect);
         connect.setOnClickListener(v -> connectTo());
 
@@ -220,15 +223,15 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
         Log.d("board", "onServiceConnected");
         serviceBinder = (BtleService.LocalBinder) service;
 
-        //TODO: rimuovere connessione automatica
-        final BluetoothManager btManager=
+        //TODO: rimuovere connessione automatica (basta rimuovere le righe da 227 a 234)
+        /*final BluetoothManager btManager=
                 (BluetoothManager) getSystemService(Context.BLUETOOTH_SERVICE);
         final BluetoothDevice remoteDevice=
                 btManager.getAdapter().getRemoteDevice(MW_MAC_ADDRESS);
 
         // Create a MetaWear board object for the Bluetooth Device
         board = serviceBinder.getMetaWearBoard(remoteDevice);
-        connectBoard();
+        connectBoard();*/
     }
 
     public void retrieveBoard(String deviceName) {
@@ -551,7 +554,7 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
         Toast.makeText(MainActivity.this, "Stopped", Toast.LENGTH_SHORT).show();
 
         if (checkSelfPermission(android.Manifest.permission.WRITE_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED) {
-            writeDataOnDevice();
+            //writeDataOnDevice();
         } else {
             ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE}, STORAGE_REQUEST_CODE);
         }
@@ -810,7 +813,18 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
     }
 
     @Override
-    public void onItemSelected(AdapterView<?> adapterView, View view, int i, long l) { }
+    public void onItemSelected(AdapterView<?> adapterView, View view, int i, long l) {
+        switch(adapterView.getSelectedItem().toString()) {
+            case "arm3":
+            case "wrist":
+                View v = findViewById(R.id.rightArea);
+                v.setVisibility(View.VISIBLE);
+                break;
+            default:
+                v = findViewById(R.id.rightArea);
+                v.setVisibility(View.GONE);
+        }
+    }
 
     @Override
     public void onNothingSelected(AdapterView<?> adapterView) { }
