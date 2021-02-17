@@ -353,7 +353,6 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
         Spinner spinner = findViewById(R.id.gesture_spinner);
         String text = spinner.getSelectedItem().toString();
 
-        //TODO: provare a creare due gestureRecognizer
         initGestureRecognizer(text);
 
         if(sensor == GestureRecognizer.SENSOR_ACCELEROMETER) {
@@ -380,30 +379,37 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
             for (int i = 0; i < jsonArray.length() ; i++) {
                 String gestureName = jsonArray.getJSONObject(i).getString("name");
                 if(text.toLowerCase().equals(gestureName.toLowerCase())) {
-                    int numberOfActions = jsonArray.getJSONObject(i).getInt("numberOfActions");
-                    int axis = jsonArray.getJSONObject(i).getInt("axis");
-                    JSONArray increasingArray = jsonArray.getJSONObject(i).getJSONArray("increasing");
-                    sensor = jsonArray.getJSONObject(i).getInt("sensor");
-                    JSONArray startingValueArray = jsonArray.getJSONObject(i).getJSONArray("startingValue");
-                    JSONArray endingValueArray = jsonArray.getJSONObject(i).getJSONArray("endingValue");
-                    double gestureDuration = jsonArray.getJSONObject(i).getDouble("maxGestureDuration");
+                    JSONArray actionsJSON = jsonArray.getJSONObject(i).getJSONArray("actions");
+                    for(int j = 0 ; j < actionsJSON.length() ; j++ ) {
+                        String actionName = actionsJSON.getJSONObject(j).getString("name");
+                        int axis = actionsJSON.getJSONObject(j).getInt("axis");
+                        boolean increasing = actionsJSON.getJSONObject(j).getBoolean("increasing");
+                        sensor = actionsJSON.getJSONObject(j).getInt("sensor");
+                        double startingValue = actionsJSON.getJSONObject(j).getDouble("startingValue");
+                        double endingValue = actionsJSON.getJSONObject(j).getDouble("endingValue");
+                        double gestureDuration = actionsJSON.getJSONObject(j).getDouble("maxGestureDuration");
 
-                    for(int j = 0 ; j < numberOfActions ; j++) {
-                        boolean increasing = (boolean) increasingArray.get(j);
-                        double startingValue = (Double) startingValueArray.get(j);
-                        double endingValue = (Double) endingValueArray.get(j);
-                        GestureRecognizer gr = new GestureRecognizer(gestureName, axis, increasing, sensor, startingValue, endingValue, gestureDuration);
+                        GestureRecognizer gr = new GestureRecognizer(actionName, axis, increasing, sensor, startingValue, endingValue, gestureDuration);
 
                         gr.addGestureEventListener(new GestureEventListener() {
                             @Override
-                            public void onGestureStarts(double timestampStart, double timestampEnding) {
-                                Log.d("onGestureStarts", "onGestureStarts, timestampStart: " + timestampStart + ", timestampEnding: " + timestampEnding);
+                            public void onGestureStarts(String gestureName, double timestampStart, double timestampEnding) {
+                                Log.d("onGestureStarts", "onGestureStarts, gestureName: " + gestureName + ", timestampStart: " + timestampStart + ", timestampEnding: " + timestampEnding);
                                 int counter = Integer.parseInt(tvGestureCounter.getText().toString()) +1;
 
                                 runOnUiThread(() -> {
                                     tvGestureCounter.setText(String.valueOf(counter));
-                                    LinearLayout ll = findViewById(R.id.leftArea);
-                                    ll.setBackgroundResource(R.color.emerald);
+
+                                    switch (gestureName) {
+                                        case "wrist2":
+                                        case "arm3_2":
+                                            LinearLayout ll = findViewById(R.id.rightArea);
+                                            ll.setBackgroundResource(R.color.emerald);
+                                            break;
+                                        default:
+                                            ll = findViewById(R.id.leftArea);
+                                            ll.setBackgroundResource(R.color.emerald);
+                                    }
                                 });
                             }
 
@@ -412,8 +418,15 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
                                 Log.d("onGestureEnds", "onGestureEnds, rg:" + rg.toStringRoundedDecimal());
                                 recognizedGestureList.add(rg);
                                 runOnUiThread(() -> {
-                                    LinearLayout ll = findViewById(R.id.leftArea);
-                                    ll.setBackgroundResource(R.color.red);
+                                    switch (rg.getGestureName()) {
+                                        case "wrist2":
+                                        case "arm3_2":
+                                            LinearLayout ll = findViewById(R.id.rightArea);
+                                            ll.setBackgroundResource(R.color.red);
+                                        default:
+                                            ll = findViewById(R.id.leftArea);
+                                            ll.setBackgroundResource(R.color.red);
+                                    }
                                 });
                             }
                         });
@@ -441,7 +454,7 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
             }
 
             long epoch = data.timestamp().getTimeInMillis();
-            double timestamp = epoch;                           //gestureRecognizer.getCurrentTime();
+            double timestamp = gestureRecognizerList.get(0).getCurrentTime();                           //gestureRecognizer.getCurrentTime();
             double x = data.value(Acceleration.class).x();
             double y = data.value(Acceleration.class).y();
             double z = data.value(Acceleration.class).z();
@@ -467,7 +480,7 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
                 gr.recognizeGesture(data);
             }
             long epoch = data.timestamp().getTimeInMillis();
-            double timestamp = epoch;                           //gestureRecognizer.getCurrentTime();
+            double timestamp = gestureRecognizerList.get(0).getCurrentTime();                           //gestureRecognizer.getCurrentTime();
             double x = data.value(Acceleration.class).x();
             double y = data.value(Acceleration.class).y();
             double z = data.value(Acceleration.class).z();
@@ -492,7 +505,7 @@ public class MainActivity extends AppCompatActivity implements ServiceConnection
                 gr.recognizeGesture(data);
             }
             long epoch = data.timestamp().getTimeInMillis();
-            double timestamp = epoch;                           //gestureRecognizer.getCurrentTime();
+            double timestamp = gestureRecognizerList.get(0).getCurrentTime();                           //gestureRecognizer.getCurrentTime();
             double x = data.value(AngularVelocity.class).x();
             double y = data.value(AngularVelocity.class).y();
             double z = data.value(AngularVelocity.class).z();

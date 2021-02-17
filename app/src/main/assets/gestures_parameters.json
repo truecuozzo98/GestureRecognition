@@ -1,94 +1,149 @@
 {
     "gestures": [
         {
-            "numberOfActions": 1,
             "name": "arm1",
-            "axis": 0,
-            "increasing": [true],
-            "sensor": 2,
-            "startingValue": [-0.8],
-            "endingValue": [0.8],
-            "maxGestureDuration": 3000
+            "actions": [
+                {
+                    "name": "arm1",
+                    "axis": 0,
+                    "increasing": true,
+                    "sensor": 2,
+                    "startingValue": -0.8,
+                    "endingValue": 0.8,
+                    "maxGestureDuration": 3000
+                }
+            ]
         }, 
         {
-            "numberOfActions": 1,
             "name": "arm2",
-            "axis": 0,
-            "increasing": [true],
-            "sensor": 2,
-            "startingValue": [-0.8],
-            "endingValue": [-0.1],
-            "maxGestureDuration": 3000
-        }, 
+            "actions": [
+                {
+                    "name": "arm2",
+                    "axis": 0,
+                    "increasing": true,
+                    "sensor": 2,
+                    "startingValue": -0.8,
+                    "endingValue": -0.1,
+                    "maxGestureDuration": 3000
+                }
+            ]
+        },
         {
-            "numberOfActions": 2,
             "name": "arm3",
-            "axis": 2,
-            "increasing": [true, false],
-            "sensor": 1,
-            "startingValue": [20.0, -20.0],
-            "endingValue": [80.0, -70.0],
-            "maxGestureDuration": 3000
+            "actions": [
+                {
+                    "name": "arm3_1",
+                    "axis": 2,
+                    "increasing": true,
+                    "sensor": 1,
+                    "startingValue": 20.0,
+                    "endingValue": 80.0,
+                    "maxGestureDuration": 3000
+                },
+                {
+                    "name": "arm3_2",
+                    "axis": 2,
+                    "increasing": false,
+                    "sensor": 1,
+                    "startingValue": -20.0,
+                    "endingValue": -70.0,
+                    "maxGestureDuration": 3000
+                }
+            ]
         },
         {
-            "numberOfActions": 1,
             "name": "arm4",
-            "axis": 1,
-            "increasing": [false],
-            "sensor": 2,
-            "startingValue": [0.3],
-            "endingValue": [0.1],
-            "maxGestureDuration": 3000
+            "actions": [
+                {
+                    "name": "arm4",
+                    "axis": 1,
+                    "increasing": false,
+                    "sensor": 2,
+                    "startingValue": 0.3,
+                    "endingValue": 0.1,
+                    "maxGestureDuration": 3000
+                }
+            ]
         },
         {
-            "numberOfActions": 1,
             "name": "leg1",
-            "axis": 0,
-            "increasing": [false],
-            "sensor": 2,
-            "startingValue": [-0.2],
-            "endingValue": [-0.6],
-            "maxGestureDuration": 3000
+            "actions": [
+                {
+                    "name": "leg1",
+                    "axis": 0,
+                    "increasing": false,
+                    "sensor": 2,
+                    "startingValue": -0.2,
+                    "endingValue": -0.6,
+                    "maxGestureDuration": 3000
+                }
+            ]
         },
         {
-            "numberOfActions": 1,
             "name": "leg2",
-            "axis": 0,
-            "increasing": [false],
-            "sensor": 2,
-            "startingValue": [0.8],
-            "endingValue": [0.3],
-            "maxGestureDuration": 3000
+            "actions": [
+                {
+                    "name": "leg2",
+                    "axis": 0,
+                    "increasing": false,
+                    "sensor": 2,
+                    "startingValue": 0.8,
+                    "endingValue": 0.3,
+                    "maxGestureDuration": 3000
+                }
+            ]
+
         },
         {
-            "numberOfActions": 1,
             "name": "leg3",
-            "axis": 0,
-            "increasing": [false],
-            "sensor": 2,
-            "startingValue": [0.8],
-            "endingValue": [0.2],
-            "maxGestureDuration": 3000
+            "actions": [
+                {
+                    "name": "leg3",
+                    "axis": 0,
+                    "increasing": false,
+                    "sensor": 2,
+                    "startingValue": 0.8,
+                    "endingValue": 0.2,
+                    "maxGestureDuration": 3000
+                }
+            ]
         },
         {
-            "numberOfActions": 2,
             "name": "wrist",
-            "axis": 0,
-            "increasing": [false, true],
-            "sensor": 1,
-            "startingValue": [-20.0, 20.0],
-            "endingValue": [-50.0, 80.0],
-            "maxGestureDuration": 3000
+            "actions": [
+                {
+                    "name": "wrist1",
+                    "axis": 0,
+                    "increasing": false,
+                    "sensor": 1,
+                    "startingValue": -20.0,
+                    "endingValue": -50.0,
+                    "maxGestureDuration": 3000
+                },
+                {
+                    "name": "wrist2",
+                    "axis": 0,
+                    "increasing": true,
+                    "sensor": 1,
+                    "startingValue": 20.0,
+                    "endingValue": 80.0,
+                    "maxGestureDuration": 3000
+                }
+            ]
         },
         {
-            "numberOfActions": 1,
             "name": "jump",
-            "axis": 0,
-            "increasing": [false],
-            "sensor": 0,
-            "startingValue": [1.8],
-            "endingValue": [0.0],
-            "maxGestureDuration": 3000
+            "actions": [
+                {
+                    "name": "jump",
+                    "axis": 0,
+                    "increasing": false,
+                    "sensor": 0,
+                    "startingValue": 1.8,
+                    "endingValue": 0.0,
+                    "maxGestureDuration": 3000
+                }
+            ]
         }
     ]
 }
