@@ -3,10 +3,18 @@ package com.example.gesturerecognition;
 import android.util.Log;
 
 import com.mbientlab.metawear.Data;
+import com.mbientlab.metawear.MetaWearBoard;
+import com.mbientlab.metawear.Route;
+import com.mbientlab.metawear.Subscriber;
 import com.mbientlab.metawear.data.Acceleration;
 import com.mbientlab.metawear.data.AngularVelocity;
+import com.mbientlab.metawear.module.Accelerometer;
+import com.mbientlab.metawear.module.GyroBmi160;
+import com.mbientlab.metawear.module.SensorFusionBosch;
 
 import java.util.ArrayList;
+
+import bolts.Continuation;
 
 interface GestureEventListener {
     void onGestureStarts(String gestureName, double timestampStart, double timestampEnding);
@@ -21,6 +29,7 @@ public class GestureRecognizer {
     public static final int AXIS_Y = 1;
     public static final int AXIS_Z = 2;
 
+    private final MetaWearBoard board;
     private final String gestureName;
     private final int axis;
     private final boolean increasing; //true se i dati tra la soglia di partenza e quella finale crescono (false viceversa)
@@ -42,8 +51,12 @@ public class GestureRecognizer {
     private double previousTimestamp;
     private double currentTime;
 
+    private Accelerometer accelerometer;
+    private SensorFusionBosch sensorFusion;
+    private GyroBmi160 gyro;
 
-    public GestureRecognizer(String gestureName, int axis, boolean increasing, int sensor, double StartingValue, double endingValue, double maxGestureDuration) {
+    public GestureRecognizer(MetaWearBoard board, String gestureName, int axis, boolean increasing, int sensor, double StartingValue, double endingValue, double maxGestureDuration) {
+        this.board = board;
         this.gestureName = gestureName;
         this.axis = axis;
         this.increasing = increasing;
@@ -60,7 +73,6 @@ public class GestureRecognizer {
         this.gestureEventListenerList = new ArrayList<>();
         this.previousTimestamp = 0;
         this.currentTime = 0;
-
         this.currentAngle = 0;
     }
 
@@ -89,7 +101,7 @@ public class GestureRecognizer {
                 throw new IllegalStateException("Unexpected value: " + axis);
         }
 
-        Log.d("value", "value: " + value);
+        Log.d("value", "currentTime: " + currentTime + ", value: " + value);
 
         if(!increasing){
             value = -1 * value;
@@ -192,5 +204,106 @@ public class GestureRecognizer {
 
     public double getCurrentTime() {
         return currentTime;
+    }
+
+    public void startRecognition() {
+        if (board == null || !board.isConnected()) {
+            return;
+        }
+
+        if(sensor == SENSOR_ACCELEROMETER) {
+            getAccelerometerData();
+        }
+
+        if(sensor == SENSOR_GRAVITY) {
+            getGravityData();
+        }
+
+        if(sensor == SENSOR_GYRO) {
+            getGyroData();
+        }
+    }
+
+    private void getAccelerometerData() {
+        accelerometer = board.getModule(Accelerometer.class);
+        accelerometer.configure()
+                .odr(5f)
+                .range(4f)
+                .commit();
+
+        accelerometer.acceleration().addRouteAsync(source -> source.stream((Subscriber) (data, env) -> {
+            recognizeGesture(data);
+
+            long epoch = data.timestamp().getTimeInMillis();
+            double x = data.value(Acceleration.class).x();
+            double y = data.value(Acceleration.class).y();
+            double z = data.value(Acceleration.class).z();
+            Model.dataListString.add(epoch + "," + currentTime + "," + x + "," + y + "," + z + ";");
+        })).continueWith((Continuation<Route, Void>) task -> {
+            accelerometer.acceleration().start();
+            accelerometer.start();
+            return null;
+        });
+    }
+
+    private void getGravityData() {
+        sensorFusion = board.getModule(SensorFusionBosch.class);
+        sensorFusion.configure()
+                .mode(SensorFusionBosch.Mode.NDOF)
+                .accRange(SensorFusionBosch.AccRange.AR_16G)
+                .gyroRange(SensorFusionBosch.GyroRange.GR_2000DPS)
+                .commit();
+
+        sensorFusion.gravity().addRouteAsync(source -> source.stream((Subscriber) (data, env) -> {
+            recognizeGesture(data);
+
+            long epoch = data.timestamp().getTimeInMillis();
+            double x = data.value(Acceleration.class).x();
+            double y = data.value(Acceleration.class).y();
+            double z = data.value(Acceleration.class).z();
+            Model.dataListString.add(epoch + "," + currentTime + "," + x + "," + y + "," + z + ";");
+        })).continueWith((Continuation<Route, Void>) task -> {
+            sensorFusion.gravity().start();
+            sensorFusion.start();
+            return null;
+        });
+    }
+
+    private void getGyroData() {
+        gyro = board.getModule(GyroBmi160.class);
+        gyro.configure()
+                .odr(GyroBmi160.OutputDataRate.ODR_25_HZ)
+                .range(GyroBmi160.Range.FSR_2000)
+                .commit();
+
+        gyro.angularVelocity().addRouteAsync(source -> source.stream((Subscriber) (data, env) -> {
+            recognizeGesture(data);
+
+            long epoch = data.timestamp().getTimeInMillis();
+            double x = data.value(AngularVelocity.class).x();
+            double y = data.value(AngularVelocity.class).y();
+            double z = data.value(AngularVelocity.class).z();
+            Model.dataListString.add(epoch + "," + currentTime + "," + x + "," + y + "," + z + ";");
+        })).continueWith((Continuation<Route, Void>) task -> {
+            gyro.angularVelocity().start();
+            gyro.start();
+            return null;
+        });
+    }
+
+    public void stopRecognition() {
+        if (sensor == SENSOR_ACCELEROMETER) {
+            accelerometer.stop();
+        }
+
+        if (sensor == SENSOR_GRAVITY) {
+            sensorFusion.stop();
+        }
+
+        if (sensor == SENSOR_GYRO) {
+            gyro.stop();
+        }
+
+        board.tearDown();
     }
 }
